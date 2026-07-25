@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, Page, ScoreBadge, StatusChip } from "@/components/ui";
-import { api, formatAge, formatBudget, Job, JobStatus } from "@/lib/api";
+import { Button, Card, Empty, ErrorNote, Page, ScoreBadge, StatusChip, inputClass } from "@/components/ui";
+import { api, BidAvailability, formatAge, formatBudget, Job, JobStatus } from "@/lib/api";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
@@ -72,7 +72,7 @@ export default function JobDetailPage() {
 
   return (
     <Page className="space-y-5">
-      <Link href="/" className="text-sm text-muted hover:text-foreground">
+      <Link href="/queue" className="text-sm text-muted hover:text-foreground">
         ← Back to queue
       </Link>
 
@@ -124,7 +124,8 @@ export default function JobDetailPage() {
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Copy is the primary action in v1: nothing is ever submitted through the API. */}
+          {/* Copy stays the primary action. Bidding through the API is opt-in and lives in its
+              own panel below, behind its own confirmation. */}
           <Button variant="primary" onClick={copyDraft} disabled={!draft.trim()}>
             {copied ? "Copied" : "Copy proposal"}
           </Button>
@@ -142,7 +143,7 @@ export default function JobDetailPage() {
             variant="ghost"
             onClick={async () => {
               await save({ status: "dismissed" });
-              router.push("/");
+              router.push("/queue");
             }}
             disabled={saving}
           >
@@ -153,6 +154,8 @@ export default function JobDetailPage() {
           </span>
         </div>
       </section>
+
+      <BidPanel job={job} onPlaced={setJob} />
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
@@ -179,7 +182,7 @@ export default function JobDetailPage() {
         )}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-2" id="clients-post">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
           Client&apos;s post
         </h2>
@@ -200,5 +203,156 @@ export default function JobDetailPage() {
         </Card>
       </section>
     </Page>
+  );
+}
+
+/**
+ * Placing a real bid.
+ *
+ * Two deliberate frictions: the button never submits on first press, and the confirm state spells
+ * out the exact amount and period. Both are cheap; a wrong bid costs a bid credit and, on a badly
+ * matched job, your reputation with that client.
+ */
+function BidPanel({ job, onPlaced }: { job: Job; onPlaced: (job: Job) => void }) {
+  const [availability, setAvailability] = useState<BidAvailability | null>(null);
+  const [amount, setAmount] = useState<string>(
+    job.bid_amount?.toString() ?? job.budget_max?.toString() ?? "",
+  );
+  const [days, setDays] = useState<string>(job.bid_period_days?.toString() ?? "7");
+  const [arming, setArming] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await api.bidAvailability();
+        if (!cancelled) setAvailability(result);
+      } catch {
+        if (!cancelled) setAvailability({ available: false, reason: "Backend unreachable." });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (job.external_bid_id) {
+    return (
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Your bid</h2>
+        <Card className="border-good/40">
+          <p className="text-sm">
+            Bid placed for{" "}
+            <strong>
+              {job.bid_amount?.toFixed(0)} {job.currency ?? ""}
+            </strong>{" "}
+            over {job.bid_period_days} days.
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Freelancer bid {job.external_bid_id}
+            {job.bid_submitted_at && ` · ${new Date(job.bid_submitted_at).toLocaleString()}`}
+          </p>
+        </Card>
+      </section>
+    );
+  }
+
+  const blocked = availability && !availability.available;
+  const noDraft = !job.proposal_text?.trim();
+
+  async function place() {
+    setPlacing(true);
+    setError(null);
+    try {
+      await api.placeBid(job.id, {
+        amount: Number(amount),
+        period_days: Number(days),
+        confirm: true,
+      });
+      onPlaced(await api.getJob(job.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bid failed");
+      setArming(false);
+    } finally {
+      setPlacing(false);
+    }
+  }
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Place a bid</h2>
+      <Card className="space-y-3">
+        {availability === null ? (
+          <p className="text-sm text-muted">Checking whether bidding is available…</p>
+        ) : blocked ? (
+          <p className="text-sm text-muted">{availability.reason}</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="block">
+                <span className="mb-1 block text-xs text-muted">
+                  Amount {job.currency ? `(${job.currency})` : ""}
+                </span>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setArming(false);
+                  }}
+                  className={`${inputClass} w-32`}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs text-muted">Delivery (days)</span>
+                <input
+                  type="number"
+                  value={days}
+                  onChange={(e) => {
+                    setDays(e.target.value);
+                    setArming(false);
+                  }}
+                  className={`${inputClass} w-24`}
+                />
+              </label>
+            </div>
+
+            {error && <ErrorNote>{error}</ErrorNote>}
+
+            {noDraft && (
+              <p className="text-sm text-muted">Write or generate a proposal before bidding.</p>
+            )}
+
+            {arming ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm">
+                  Send this proposal and bid {Number(amount).toFixed(0)} {job.currency ?? ""} over{" "}
+                  {days} days?
+                </span>
+                <Button variant="primary" onClick={place} disabled={placing}>
+                  {placing ? "Placing…" : "Yes, place the bid"}
+                </Button>
+                <Button variant="ghost" onClick={() => setArming(false)} disabled={placing}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => setArming(true)}
+                disabled={noDraft || !Number(amount) || !Number(days)}
+              >
+                Place bid…
+              </Button>
+            )}
+
+            <p className="text-xs text-muted">
+              This submits to Freelancer.com and cannot be undone from here.
+            </p>
+          </>
+        )}
+      </Card>
+    </section>
   );
 }

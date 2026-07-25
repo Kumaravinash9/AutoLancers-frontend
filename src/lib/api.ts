@@ -8,7 +8,18 @@
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010";
 
-export type JobStatus = "new" | "drafted" | "approved" | "dismissed";
+export type JobStatus = "new" | "drafted" | "approved" | "dismissed" | "submitted";
+
+export interface BidAvailability {
+  available: boolean;
+  reason: string;
+}
+
+export interface BidResult {
+  bid_id: string;
+  amount: number;
+  period_days: number;
+}
 
 export interface ScoreReason {
   label: string;
@@ -37,6 +48,10 @@ export interface Job {
   proposal_text: string | null;
   status: JobStatus;
   first_seen_at: string;
+  bid_amount: number | null;
+  bid_period_days: number | null;
+  bid_submitted_at: string | null;
+  external_bid_id: string | null;
 }
 
 export interface Skill {
@@ -142,6 +157,12 @@ export const api = {
     request<Profile>("/profile", { method: "PUT", body: JSON.stringify(profile) }),
 
   authStatus: () => request<AuthStatus>("/auth/status"),
+
+  bidAvailability: () => request<BidAvailability>("/jobs/bid-availability"),
+
+  /** Places a real bid. `confirm` is required by the backend — there is no implicit submit. */
+  placeBid: (id: number, body: { amount: number; period_days: number; confirm: true }) =>
+    request<BidResult>(`/jobs/${id}/bid`, { method: "POST", body: JSON.stringify(body) }),
 
   runPipeline: () => request<CycleReport>("/pipeline/run", { method: "POST" }),
 };
