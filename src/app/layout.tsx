@@ -1,18 +1,35 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Bricolage_Grotesque, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
+import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "automateLancers",
-  description: "Freelancer.com job discovery, scoring, and AI-drafted proposals.",
-};
+const display = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
 
-const NAV = [
-  { href: "/queue", label: "Queue" },
-  { href: "/profile", label: "Profile" },
-  { href: "/settings", label: "Settings" },
-];
+const sans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+const mono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "automateLancers — bid on the jobs worth bidding on",
+  description:
+    "Watches freelance marketplaces for work that fits your skills, scores every listing with "
+    + "its reasons shown, and drafts the proposal. You review and send.",
+};
 
 export default function RootLayout({
   children,
@@ -20,27 +37,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html
+      lang="en"
+      className={`${display.variable} ${sans.variable} ${mono.variable} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col">
-        <header className="border-b border-border bg-surface">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
-            <Link href="/" className="font-semibold tracking-tight">
-              automate<span className="text-accent">Lancers</span>
-            </Link>
-            <nav className="flex gap-4 text-sm">
-              {NAV.map((item) => (
-                <Link key={item.href} href={item.href} className="text-muted hover:text-foreground">
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-            <span className="ml-auto text-xs text-muted">
-              Draft-only · nothing is auto-submitted
-            </span>
-          </div>
-        </header>
-        {/* No content box here on purpose: the marketing page runs edge to edge, so each page
-            owns its own width and padding via <Page>. */}
+        <SiteNav />
+        {/* No content box: the marketing page runs edge to edge, so each screen sets its own. */}
         <main className="flex-1">{children}</main>
       </body>
     </html>

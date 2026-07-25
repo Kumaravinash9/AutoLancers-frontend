@@ -1,63 +1,121 @@
 @import "tailwindcss";
 
+/* Pine as the primary: in this product green means "this one cleared the bar", which is the
+   whole proposition. Ochre carries numerals so scores read as data, not as branding. */
 :root {
-  --background: #fbfaf8;
+  --background: #f3f5f4;
   --surface: #ffffff;
-  --border: #e6e2db;
-  --foreground: #1c1a17;
-  --muted: #6f6a62;
-  --accent: #b4531f;
-  --accent-soft: #f6ece5;
-  --good: #2f6f4e;
-  --warn: #8a6d1f;
+  --sunken: #e9edeb;
+  --border: #d7e0dc;
+  --foreground: #101c19;
+  --muted: #5c6b66;
+  --accent: #14563f;
+  --accent-soft: #e2ece7;
+  --figure: #b8791f;
+  --good: #14563f;
+  --warn: #9a6b12;
 
-  /* Marketing surfaces only. The deep ground gives the landing page a register the
-     working UI doesn't need — the app stays quiet, the pitch gets to speak up. */
-  --deep: #241f1b;
-  --deep-fg: #f2ede6;
-  --deep-muted: #a89e92;
+  --deep: #0e1a17;
+  --deep-fg: #eef3f1;
+  --deep-muted: #93a49e;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #131211;
-    --surface: #1c1a19;
-    --border: #302c29;
-    --foreground: #ece8e3;
-    --muted: #9a938a;
-    --accent: #e0824a;
-    --accent-soft: #2a201a;
-    --good: #6db98d;
-    --warn: #d6b45c;
+    --background: #0b110f;
+    --surface: #131b19;
+    --sunken: #1a2320;
+    --border: #26312d;
+    --foreground: #e8efec;
+    --muted: #93a49e;
+    --accent: #4fae86;
+    --accent-soft: #16241f;
+    --figure: #d9a04a;
+    --good: #4fae86;
+    --warn: #d9a04a;
 
-    --deep: #0f0e0d;
-    --deep-fg: #ece8e3;
-    --deep-muted: #948b81;
+    --deep: #070d0c;
+    --deep-fg: #e8efec;
+    --deep-muted: #8b9c96;
   }
+}
+
+:root[data-theme="dark"] {
+  --background: #0b110f;
+  --surface: #131b19;
+  --sunken: #1a2320;
+  --border: #26312d;
+  --foreground: #e8efec;
+  --muted: #93a49e;
+  --accent: #4fae86;
+  --accent-soft: #16241f;
+  --figure: #d9a04a;
+  --good: #4fae86;
+  --warn: #d9a04a;
+  --deep: #070d0c;
+  --deep-fg: #e8efec;
+  --deep-muted: #8b9c96;
+}
+
+:root[data-theme="light"] {
+  --background: #f3f5f4;
+  --surface: #ffffff;
+  --sunken: #e9edeb;
+  --border: #d7e0dc;
+  --foreground: #101c19;
+  --muted: #5c6b66;
+  --accent: #14563f;
+  --accent-soft: #e2ece7;
+  --figure: #b8791f;
+  --good: #14563f;
+  --warn: #9a6b12;
+  --deep: #0e1a17;
+  --deep-fg: #eef3f1;
+  --deep-muted: #93a49e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
   --color-border: var(--border);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-figure: var(--figure);
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-deep: var(--deep);
   --color-deep-fg: var(--deep-fg);
   --color-deep-muted: var(--deep-muted);
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* Preserve the newlines in a drafted proposal without a <pre> font change. */
 .proposal {
   white-space: pre-wrap;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

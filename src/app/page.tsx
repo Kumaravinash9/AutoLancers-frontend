@@ -1,220 +1,201 @@
 import Link from "next/link";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "automateLancers — bid on the jobs worth bidding on",
-  description:
-    "Watches freelance marketplaces for work that actually fits your skills, scores every listing "
-    + "with its reasons shown, and drafts the proposal. You review and send.",
-};
+/** Real listing titles from a live fetch, so the visual shows the actual mix of a feed. */
+const NOISE = [
+  "High-Quality SEO Backlink Creation",
+  "Logo Brand Pakaian & Aksesoris",
+  "Comprehensive Children's Apparel Market Research",
+  "Data entry from PDF to Excel — 200 pages",
+  "Trial Off-Page SEO Backlink Strategy",
+  "Virtual assistant for cold calling",
+  "Rewrite 30 product descriptions",
+  "Facebook ads manager needed",
+  "Translate documents to Portuguese",
+  "Unreal Engine Realistic Game Development",
+  "Shopify theme tweak — small budget",
+  "Social media posts, 20 per month",
+];
 
-/** Live discovery + scoring; drafting runs on whichever LLM is configured. */
+const SHORTLIST = [
+  {
+    score: 86,
+    title: "Next.js dashboard for a logistics team",
+    meta: "1200–2500 USD · 6 bids · 2h ago",
+  },
+  { score: 69, title: "Fix DeepStream counting pipeline", meta: "600–1500 USD · 8 bids · 9h ago" },
+  {
+    score: 62,
+    title: "Python automation for booking flow",
+    meta: "600–1500 USD · 13 bids · 10h ago",
+  },
+];
+
 const PILLARS = [
   {
     kicker: "Discovery",
-    title: "Finds the work that fits you",
+    title: "Only work that matches your skills",
     body:
-      "Your skills are matched against the marketplace's own categories, so the queue is "
-      + "developers' work if you're a developer — not whatever happened to be posted last. "
-      + "Polls every 25 seconds, because bid counts climb fast.",
-    status: "live",
+      "Your skills are matched against the marketplace's own categories, so a developer sees "
+      + "development work — not whatever was posted most recently. It checks every 25 seconds, "
+      + "because bid counts climb fast.",
   },
   {
     kicker: "Scoring",
-    title: "Shows its working, every time",
+    title: "Every score shows its working",
     body:
-      "Each listing gets a score out of 100 and the reasons behind it: which of your skills "
-      + "matched, how the budget compares to your floor, how many bids are already in, how fresh "
-      + "it is. Rejected listings say why they were rejected.",
-    status: "live",
+      "You see which of your skills matched, how the budget compares to your floor, how many bids "
+      + "are already in, and how fresh the post is. Filtered-out jobs say why, so you can tell a "
+      + "quiet day from a bad setting.",
   },
   {
-    kicker: "Drafting",
-    title: "Writes the first draft for you",
+    kicker: "Proposals",
+    title: "The first draft is already written",
     body:
-      "An LLM drafts a proposal that opens on the client's actual problem, names something "
-      + "specific from their post, and closes with a real question. It only uses facts from your "
-      + "profile — it will not invent experience or numbers on your behalf.",
-    status: "live",
+      "Each match arrives with a proposal that opens on the client's actual problem, names "
+      + "something specific from their post, and ends with a real question. It uses only what's in "
+      + "your profile — it will not invent experience on your behalf.",
   },
   {
-    kicker: "Profile",
-    title: "One profile drives all of it",
+    kicker: "Control",
+    title: "Nothing is sent without you",
     body:
-      "Your skills, weights, rate floors and positioning live in one place, and both the scoring "
-      + "and the drafts read from it. Change a weight, re-score everything, see the queue reorder.",
-    status: "live",
-  },
-  {
-    kicker: "Notifications",
-    title: "Tells you when something matters",
-    body:
-      "A strong match at 2am is worth knowing about before the bid count triples. Alerts to "
-      + "WhatsApp, Slack or email when a listing clears your bar, so you don't sit watching a queue.",
-    status: "planned",
-  },
-  {
-    kicker: "Platforms",
-    title: "More than one marketplace",
-    body:
-      "Freelancer.com connects directly. Upwork's terms prohibit automated discovery, so that "
-      + "route is paste-a-job-in rather than polling — one queue either way.",
-    status: "partial",
+      "Read, edit, then decide. Bidding through the platform stays off unless you switch it on, "
+      + "and even then every bid needs your confirmation. No proposal goes out in your name by "
+      + "accident.",
   },
 ];
 
 const STEPS = [
-  {
-    n: "01",
-    title: "Connect your account",
-    body: "One OAuth approval, read access only. Or skip it — public listings work without connecting.",
-  },
-  {
-    n: "02",
-    title: "Describe what you want",
-    body: "Skills and weights, your rate floors, the words that should never appear in a job you see.",
-  },
-  {
-    n: "03",
-    title: "Review what comes back",
-    body: "Open a match, read why it scored, edit the draft, copy it across. The queue keeps filling.",
-  },
+  { title: "Create your account", body: "Email and password. No card." },
+  { title: "Connect a marketplace", body: "One approval on Freelancer.com. Read access." },
+  { title: "Describe your work", body: "Skills, rate floors, and what you never want to see." },
+  { title: "Review your shortlist", body: "Open a match, read why it scored, edit, send." },
 ];
 
-const STATUS_LABEL: Record<string, { text: string; className: string }> = {
-  live: { text: "Available now", className: "text-good border-good/40 bg-good/10" },
-  partial: { text: "Partly available", className: "text-warn border-warn/40 bg-warn/10" },
-  planned: { text: "Planned", className: "text-muted border-border bg-surface" },
-};
-
-export default function ProductPage() {
+export default function HomePage() {
   return (
-    <div>
+    <>
       <Hero />
-      <Problem />
+      <Proof />
       <Pillars />
-      <HowItWorks />
-      <Guarantee />
+      <Steps />
       <Close />
-    </div>
+    </>
   );
 }
 
 function Hero() {
   return (
-    <section className="bg-deep px-6 py-20 text-deep-fg sm:py-28">
-      <div className="mx-auto grid max-w-5xl gap-12 [&>*]:min-w-0 lg:grid-cols-[1.15fr_1fr] lg:items-center">
+    <section className="border-b border-border px-6 py-16 sm:py-24">
+      {/* Top-aligned, not centred: the funnel is taller than the copy, and centring it opens a
+          void above the headline. */}
+      <div className="mx-auto grid max-w-6xl items-start gap-12 [&>*]:min-w-0 lg:grid-cols-[1.05fr_.95fr]">
         <div className="flex flex-col gap-6">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-deep-muted">
-            Freelance bidding assistant
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">
+            For freelancers who bid to win work
           </p>
-          <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl">
-            Stop reading job boards.
+
+          <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-[3.4rem]">
+            Two hundred listings.
             <br />
-            Start reviewing a shortlist.
+            <span className="text-accent">Four worth your time.</span>
           </h1>
-          <p className="max-w-xl text-lg leading-relaxed text-deep-muted">
-            It watches the marketplace for work that genuinely fits your skills, scores every
-            listing and shows you why, then drafts the proposal. You read four good matches instead
-            of two hundred listings.
+
+          <p className="max-w-xl text-lg leading-relaxed text-muted">
+            automateLancers reads the job boards so you don&apos;t. It scores every listing against
+            your actual skills and rates, sets the rest aside, and has the proposal drafted before
+            you open it.
           </p>
-          <div className="flex flex-wrap items-center gap-3 pt-2">
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <Link
-              href="/settings"
-              className="rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              href="/login?mode=signup"
+              className="rounded-md bg-accent px-5 py-2.5 font-medium text-white transition-opacity hover:opacity-90"
             >
-              Connect an account
+              Start free
             </Link>
             <Link
-              href="/queue"
-              className="rounded-md border border-deep-muted/40 px-5 py-2.5 text-sm font-medium transition-colors hover:border-deep-fg"
+              href="/login"
+              className="rounded-md border border-border px-5 py-2.5 font-medium transition-colors hover:bg-accent-soft"
             >
-              See the queue
+              Sign in
             </Link>
           </div>
-          <p className="font-mono text-xs text-deep-muted">
-            Nothing is ever submitted for you. Every proposal waits for your review.
+
+          <p className="font-mono text-xs text-muted">
+            Free while in early access · Connect in one click · Cancel any time
           </p>
         </div>
 
-        <QueuePreview />
+        <Funnel />
       </div>
     </section>
   );
 }
 
-/** A still of the real queue — same score badge, same reason lines the app renders. */
-function QueuePreview() {
+/**
+ * The signature: a feed collapsing into a shortlist.
+ *
+ * The dimmed rows are real titles from a live fetch. Showing the discarded ones is the point —
+ * the product's job is subtraction, and a screenshot of a tidy list wouldn't convey that.
+ */
+function Funnel() {
   return (
-    <div className="rounded-lg border border-deep-muted/25 bg-black/20 p-4" aria-hidden="true">
-      <p className="mb-3 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-deep-muted">
-        Needs review
-      </p>
-
-      <div className="flex flex-col gap-2.5">
-        <div className="rounded-md border border-deep-muted/25 p-3">
-          <div className="flex items-start gap-3">
-            <span className="rounded bg-good/20 px-1.5 py-0.5 font-mono text-sm font-semibold tabular-nums text-good">
-              86
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">Next.js dashboard for a logistics team</p>
-              <p className="mt-1 font-mono text-[0.7rem] text-deep-muted">
-                1200–2500 USD · 6 bids · 2h ago · draft ready
-              </p>
-            </div>
-          </div>
-          <dl className="mt-3 space-y-1 border-t border-deep-muted/20 pt-2 font-mono text-[0.7rem] text-deep-muted">
-            {[
-              ["+24.0", "Skills matched — next.js, react, node"],
-              ["+20.0", "Budget fit — up to 2500 against your floor"],
-              ["+7.6", "Competition — 6 bids so far"],
-            ].map(([points, reason]) => (
-              <div key={reason} className="flex gap-3">
-                <dt className="w-12 shrink-0 tabular-nums">{points}</dt>
-                {/* min-w-0 is load-bearing: without it a flex item won't shrink below its
-                    text width, so `truncate` never engages and the column blows out. */}
-                <dd className="min-w-0 truncate">{reason}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-
-        <div className="rounded-md border border-deep-muted/20 p-3 opacity-60">
-          <div className="flex items-center gap-3">
-            <span className="rounded bg-deep-muted/20 px-1.5 py-0.5 font-mono text-sm font-semibold tabular-nums text-deep-muted">
-              0
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm">Logo and brand palette for a bakery</p>
-              <p className="mt-0.5 font-mono text-[0.7rem] text-deep-muted">
-                Rejected — 42 bids already, cap is 25
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="flex flex-col gap-3" aria-hidden="true">
+      <div className="flex items-baseline justify-between font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted">
+        <span>Today&apos;s feed</span>
+        <span className="tabular-nums">204 listings</span>
       </div>
+
+      <div className="relative overflow-hidden rounded-lg border border-border bg-surface p-3">
+        <ul className="flex flex-col gap-1.5">
+          {NOISE.map((title, i) => (
+            <li
+              key={title}
+              className="truncate rounded bg-sunken px-2.5 py-1.5 text-xs text-muted"
+              style={{ opacity: Math.max(0.14, 0.62 - i * 0.05) }}
+            >
+              {title}
+            </li>
+          ))}
+        </ul>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-surface" />
+      </div>
+
+      <div className="flex items-baseline justify-between font-mono text-[0.7rem] uppercase tracking-[0.12em] text-accent">
+        <span>Cleared your bar</span>
+        <span className="tabular-nums">3</span>
+      </div>
+
+      <ul className="flex flex-col gap-2">
+        {SHORTLIST.map((job) => (
+          <li
+            key={job.title}
+            className="flex items-start gap-3 rounded-lg border border-border bg-surface p-3"
+          >
+            <span className="rounded bg-accent-soft px-1.5 py-0.5 font-mono text-sm font-medium tabular-nums text-figure">
+              {job.score}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{job.title}</p>
+              <p className="mt-0.5 truncate font-mono text-[0.7rem] text-muted">{job.meta}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function Problem() {
+function Proof() {
   return (
-    <section className="border-b border-border px-6 py-16">
-      <div className="mx-auto grid max-w-5xl gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
-        <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted sm:pt-1.5">
-          The problem
+    <section className="border-b border-border bg-deep px-6 py-14 text-deep-fg">
+      <div className="mx-auto max-w-6xl">
+        <p className="max-w-3xl font-display text-2xl leading-snug tracking-tight text-balance sm:text-3xl">
+          On Freelancer.com a listing routinely passes forty bids within two hours. Being early
+          matters more than being thorough — and you can&apos;t be early if you&apos;re reading
+          everything.
         </p>
-        <div className="flex flex-col gap-5">
-          <p className="text-2xl leading-snug tracking-tight text-balance sm:text-[1.75rem]">
-            Bidding rewards being early, and punishes reading everything.
-          </p>
-          <p className="max-w-2xl leading-relaxed text-muted">
-            On Freelancer.com a listing routinely passes forty bids within a couple of hours. By the
-            time you have read enough postings to find one worth answering, the ones worth answering
-            are crowded. So the work becomes triage — and triage is the part a machine is good at.
-          </p>
-        </div>
       </div>
     </section>
   );
@@ -223,47 +204,41 @@ function Problem() {
 function Pillars() {
   return (
     <section className="border-b border-border px-6 py-16">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-muted">What you get</h2>
-
-        <div className="mt-8 grid gap-x-10 gap-y-10 sm:grid-cols-2">
-          {PILLARS.map((p) => {
-            const status = STATUS_LABEL[p.status];
-            return (
-              <article key={p.title} className="flex flex-col gap-2.5 border-t border-border pt-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-accent">
-                    {p.kicker}
-                  </span>
-                  <span
-                    className={`rounded border px-1.5 py-0.5 font-mono text-[0.65rem] ${status.className}`}
-                  >
-                    {status.text}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold tracking-tight text-balance">{p.title}</h3>
-                <p className="leading-relaxed text-muted">{p.body}</p>
-              </article>
-            );
-          })}
+      <div className="mx-auto max-w-6xl">
+        <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-muted">
+          What it does for you
+        </h2>
+        <div className="mt-8 grid gap-x-12 gap-y-10 sm:grid-cols-2">
+          {PILLARS.map((p) => (
+            <article key={p.title} className="flex flex-col gap-2.5 border-t border-border pt-5">
+              <span className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-accent">
+                {p.kicker}
+              </span>
+              <h3 className="font-display text-xl font-semibold tracking-tight text-balance">
+                {p.title}
+              </h3>
+              <p className="leading-relaxed text-muted">{p.body}</p>
+            </article>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-function HowItWorks() {
+function Steps() {
   return (
     <section className="border-b border-border px-6 py-16">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-muted">
-          Getting started
-        </h2>
-        <ol className="mt-8 grid gap-8 sm:grid-cols-3">
-          {STEPS.map((s) => (
-            <li key={s.n} className="flex flex-col gap-2 border-t border-border pt-5">
-              <span className="font-mono text-sm tabular-nums text-accent">{s.n}</span>
-              <h3 className="font-semibold tracking-tight">{s.title}</h3>
+      <div className="mx-auto max-w-6xl">
+        <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Getting set up</h2>
+        {/* Numbered because the order is real: you can't connect before you have an account. */}
+        <ol className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="flex flex-col gap-2 border-t border-border pt-5">
+              <span className="font-mono text-sm tabular-nums text-figure">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="font-display font-semibold tracking-tight">{s.title}</h3>
               <p className="text-sm leading-relaxed text-muted">{s.body}</p>
             </li>
           ))}
@@ -273,53 +248,31 @@ function HowItWorks() {
   );
 }
 
-function Guarantee() {
-  return (
-    <section className="bg-deep px-6 py-16 text-deep-fg">
-      <div className="mx-auto grid max-w-5xl gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
-        <p className="font-mono text-xs uppercase tracking-[0.16em] text-deep-muted sm:pt-1.5">
-          The guarantee
-        </p>
-        <div className="flex flex-col gap-5">
-          <p className="text-2xl leading-snug tracking-tight text-balance sm:text-[1.75rem]">
-            It cannot bid for you. Not by policy — by construction.
-          </p>
-          <p className="max-w-2xl leading-relaxed text-deep-muted">
-            When you connect an account, the permission that would allow placing bids is never
-            requested. The connection grants read access to your basic profile and nothing else, so
-            the ability to submit on your behalf does not exist to be misused.
-          </p>
-          <p className="max-w-2xl leading-relaxed text-deep-muted">
-            An assistant that fires off proposals in your name is a good way to lose an account and
-            a reputation. This drafts; you decide what gets sent.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function Close() {
   return (
-    <section className="px-6 py-16">
-      <div className="mx-auto flex max-w-5xl flex-col items-start gap-5">
-        <h2 className="max-w-2xl text-2xl font-semibold leading-snug tracking-tight text-balance sm:text-3xl">
-          Set your skills once, then read only what clears the bar.
+    <section className="px-6 py-20">
+      <div className="mx-auto flex max-w-6xl flex-col items-start gap-6">
+        <h2 className="max-w-2xl font-display text-3xl font-semibold leading-tight tracking-tight text-balance sm:text-4xl">
+          Set it up once. Then read four things instead of two hundred.
         </h2>
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/profile"
-            className="rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            href="/login?mode=signup"
+            className="rounded-md bg-accent px-5 py-2.5 font-medium text-white transition-opacity hover:opacity-90"
           >
-            Set up your profile
+            Create your account
           </Link>
           <Link
-            href="/queue"
-            className="rounded-md border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-accent-soft"
+            href="/login"
+            className="rounded-md border border-border px-5 py-2.5 font-medium transition-colors hover:bg-accent-soft"
           >
-            Open the queue
+            Sign in
           </Link>
         </div>
+        <p className="max-w-2xl text-sm text-muted">
+          automateLancers is not affiliated with Freelancer.com or Upwork. You connect your own
+          account, and you keep control of everything sent from it.
+        </p>
       </div>
     </section>
   );
