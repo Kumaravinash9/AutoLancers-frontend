@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { ErrorNote, inputClass } from "@/components/ui";
+import { accounts } from "@/lib/api";
 
 export default function LoginPage() {
   return (
@@ -21,13 +22,23 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitting(true);
-    // Accounts aren't wired up yet — this install runs single-user, so the form takes you
-    // straight in rather than pretending to authenticate.
-    router.push("/queue");
+    setError(null);
+    try {
+      const account = signup
+        ? await accounts.register(email, password)
+        : await accounts.login(email, password);
+      // Admins land on the operator view; everyone else goes to their queue.
+      router.push(account.role === "admin" ? "/admin" : "/queue");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sign in");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -65,10 +76,7 @@ function LoginForm() {
             {signup ? "Free while in early access. No card." : "Welcome back."}
           </p>
 
-          <ErrorNote>
-            Accounts aren&apos;t connected yet — this install runs as a single user, so either
-            button takes you straight to the queue.
-          </ErrorNote>
+          {error && <div className="mt-4"><ErrorNote>{error}</ErrorNote></div>}
 
           <form onSubmit={submit} className="mt-4 flex flex-col gap-3.5">
             <label className="block">
@@ -103,7 +111,7 @@ function LoginForm() {
               disabled={submitting}
               className="mt-1 rounded-md bg-accent px-4 py-2.5 font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-              {signup ? "Create account" : "Sign in"}
+              {submitting ? "Working…" : signup ? "Create account" : "Sign in"}
             </button>
           </form>
 

@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import { Account, accounts } from "@/lib/api";
 
 /**
  * One nav, two audiences.
@@ -19,6 +22,24 @@ const MARKETING_ROUTES = new Set(["/", "/login"]);
 
 export function SiteNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [account, setAccount] = useState<Account | null>(null);
+
+  // Signed-out is the normal case here, not an error — a failed /me just means no session.
+  useEffect(() => {
+    const state = { cancelled: false };
+    void (async () => {
+      try {
+        const me = await accounts.me();
+        if (!state.cancelled) setAccount(me);
+      } catch {
+        if (!state.cancelled) setAccount(null);
+      }
+    })();
+    return () => {
+      state.cancelled = true;
+    };
+  }, [pathname]);
   const marketing = MARKETING_ROUTES.has(pathname);
 
   return (
@@ -59,9 +80,32 @@ export function SiteNav() {
                 );
               })}
             </nav>
-            <span className="ml-auto font-mono text-xs text-deep-muted">
-              Nothing is sent without your say-so
-            </span>
+            {account?.role === "admin" && (
+              <Link
+                href="/admin"
+                className={
+                  pathname.startsWith("/admin")
+                    ? "font-medium text-accent"
+                    : "text-muted hover:text-foreground"
+                }
+              >
+                Admin
+              </Link>
+            )}
+            <div className="ml-auto flex items-center gap-3 text-sm">
+              {account && <span className="hidden text-muted sm:inline">{account.email}</span>}
+              <button
+                type="button"
+                onClick={async () => {
+                  await accounts.logout().catch(() => {});
+                  setAccount(null);
+                  router.push("/");
+                }}
+                className="text-muted transition-colors hover:text-foreground"
+              >
+                Sign out
+              </button>
+            </div>
           </>
         )}
       </div>

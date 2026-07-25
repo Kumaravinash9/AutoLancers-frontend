@@ -112,6 +112,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
       cache: "no-store",
+      // The session lives in an httpOnly cookie, so every request has to carry credentials.
+      credentials: "include",
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
   } catch {
@@ -185,3 +187,78 @@ export function formatAge(iso: string | null): string {
   if (minutes < 60 * 48) return `${Math.round(minutes / 60)}h ago`;
   return `${Math.round(minutes / 1440)}d ago`;
 }
+
+
+// --- accounts and admin ---
+
+export interface Account {
+  id: number;
+  email: string;
+  role: "user" | "admin";
+  is_active: boolean;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface AdminOverview {
+  total_users: number;
+  active_users: number;
+  connected_accounts: number;
+  total_jobs: number;
+  matched_jobs: number;
+  drafted_jobs: number;
+  bids_placed: number;
+  proposal_input_tokens: number;
+  proposal_output_tokens: number;
+  cycles_24h: number;
+  failed_cycles_24h: number;
+  draft_failures_24h: number;
+  last_cycle_at: string | null;
+}
+
+export interface CycleRun {
+  id: number;
+  started_at: string;
+  duration_ms: number;
+  fetched: number;
+  created: number;
+  updated: number;
+  rejected: number;
+  drafted: number;
+  draft_failures: number;
+  authenticated: boolean;
+  trigger: string;
+  error: string | null;
+}
+
+export interface AdminUser extends Account {
+  job_count: number;
+  connected: boolean;
+  connection_scope: string | null;
+}
+
+export const accounts = {
+  register: (email: string, password: string) =>
+    request<Account>("/accounts/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  login: (email: string, password: string) =>
+    request<Account>("/accounts/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  logout: () => request<void>("/accounts/logout", { method: "POST" }),
+  me: () => request<Account>("/accounts/me"),
+};
+
+export const admin = {
+  overview: () => request<AdminOverview>("/admin/overview"),
+  cycles: (limit = 25) => request<CycleRun[]>(`/admin/cycles?limit=${limit}`),
+  users: () => request<AdminUser[]>("/admin/users"),
+  setRole: (id: number, role: "user" | "admin") =>
+    request<Account>(`/admin/users/${id}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    }),
+};
