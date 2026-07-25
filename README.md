@@ -1,9 +1,9 @@
-# automateLancers — frontend
+# AutoLancers — frontend
 
 Review UI for the freelance auto-bid assistant: the scored job queue, the proposal drafts, and the
 profile that tunes both.
 
-The backend lives in a separate repo: `automateLancers-backend`. This app talks to it over HTTP
+The backend lives in a separate repo: `AutoLancers-backend`. This app talks to it over HTTP
 only — no shared database, no shared code.
 
 ## Setup

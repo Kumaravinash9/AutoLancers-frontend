@@ -25,7 +25,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "automateLancers — bid on the jobs worth bidding on",
+  title: "AutoLancers — bid on the jobs worth bidding on",
   description:
     "Watches freelance marketplaces for work that fits your skills, scores every listing with "
     + "its reasons shown, and drafts the proposal. You review and send.",

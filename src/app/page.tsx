@@ -102,7 +102,7 @@ function Hero() {
           </h1>
 
           <p className="max-w-xl text-lg leading-relaxed text-muted">
-            automateLancers reads the job boards so you don&apos;t. It scores every listing against
+            AutoLancers reads the job boards so you don&apos;t. It scores every listing against
             your actual skills and rates, sets the rest aside, and has the proposal drafted before
             you open it.
           </p>
@@ -270,7 +270,7 @@ function Close() {
           </Link>
         </div>
         <p className="max-w-2xl text-sm text-muted">
-          automateLancers is not affiliated with Freelancer.com or Upwork. You connect your own
+          AutoLancers is not affiliated with Freelancer.com or Upwork. You connect your own
           account, and you keep control of everything sent from it.
         </p>
       </div>

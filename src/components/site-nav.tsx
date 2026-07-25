@@ -46,7 +46,7 @@ export function SiteNav() {
     <header className="border-b border-border bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3.5">
         <Link href="/" className="font-display text-[1.05rem] font-semibold tracking-tight">
-          automate<span className="text-accent">Lancers</span>
+          Auto<span className="text-accent">Lancers</span>
         </Link>
 
         {marketing ? (
