@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, ScoreBadge, StatusChip } from "@/components/ui";
+import { Button, Card, Empty, ErrorNote, Page, ScoreBadge, StatusChip } from "@/components/ui";
 import { api, formatAge, formatBudget, Job, JobStatus } from "@/lib/api";
 
 export default function JobDetailPage() {
@@ -64,14 +64,14 @@ export default function JobDetailPage() {
     }
   }
 
-  if (loading) return <Empty>Loading…</Empty>;
-  if (error && !job) return <ErrorNote>{error}</ErrorNote>;
-  if (!job) return <Empty>Job not found.</Empty>;
+  if (loading) return <Page><Empty>Loading…</Empty></Page>;
+  if (error && !job) return <Page><ErrorNote>{error}</ErrorNote></Page>;
+  if (!job) return <Page><Empty>Job not found.</Empty></Page>;
 
   const dirty = draft !== (job.proposal_text ?? "");
 
   return (
-    <div className="space-y-5">
+    <Page className="space-y-5">
       <Link href="/" className="text-sm text-muted hover:text-foreground">
         ← Back to queue
       </Link>
@@ -199,6 +199,6 @@ export default function JobDetailPage() {
           )}
         </Card>
       </section>
-    </div>
+    </Page>
   );
 }

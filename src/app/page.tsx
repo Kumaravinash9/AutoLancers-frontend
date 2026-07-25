@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, ScoreBadge, StatusChip } from "@/components/ui";
+import { Button, Card, Empty, ErrorNote, Page, ScoreBadge, StatusChip } from "@/components/ui";
 import { api, formatAge, formatBudget, Job } from "@/lib/api";
 
 type Tab = "review" | "matched" | "rejected";
@@ -86,7 +86,7 @@ export default function QueuePage() {
   }
 
   return (
-    <div className="space-y-5">
+    <Page className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">Job queue</h1>
         <div className="ml-auto flex gap-2">
@@ -140,7 +140,7 @@ export default function QueuePage() {
           ))}
         </ul>
       )}
-    </div>
+    </Page>
   );
 }
 

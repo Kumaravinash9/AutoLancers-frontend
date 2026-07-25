@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, Field, inputClass } from "@/components/ui";
+import { Button, Card, Empty, ErrorNote, Field, Page, inputClass } from "@/components/ui";
 import { api, Profile } from "@/lib/api";
 
 export default function ProfilePage() {
@@ -63,11 +63,11 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) return <Empty>Loading…</Empty>;
-  if (!profile) return <ErrorNote>{error ?? "Could not load the profile."}</ErrorNote>;
+  if (loading) return <Page><Empty>Loading…</Empty></Page>;
+  if (!profile) return <Page><ErrorNote>{error ?? "Could not load the profile."}</ErrorNote></Page>;
 
   return (
-    <div className="space-y-5">
+    <Page className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold">Profile</h1>
         <p className="mt-1 text-sm text-muted">
@@ -195,7 +195,7 @@ export default function ProfilePage() {
           Save only
         </Button>
       </div>
-    </div>
+    </Page>
   );
 }
 

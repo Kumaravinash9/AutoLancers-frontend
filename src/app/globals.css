@@ -10,6 +10,12 @@
   --accent-soft: #f6ece5;
   --good: #2f6f4e;
   --warn: #8a6d1f;
+
+  /* Marketing surfaces only. The deep ground gives the landing page a register the
+     working UI doesn't need — the app stays quiet, the pitch gets to speak up. */
+  --deep: #241f1b;
+  --deep-fg: #f2ede6;
+  --deep-muted: #a89e92;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +29,10 @@
     --accent-soft: #2a201a;
     --good: #6db98d;
     --warn: #d6b45c;
+
+    --deep: #0f0e0d;
+    --deep-fg: #ece8e3;
+    --deep-muted: #948b81;
   }
 }
 
@@ -36,6 +46,9 @@
   --color-accent-soft: var(--accent-soft);
   --color-good: var(--good);
   --color-warn: var(--warn);
+  --color-deep: var(--deep);
+  --color-deep-fg: var(--deep-fg);
+  --color-deep-muted: var(--deep-muted);
 }
 
 body {

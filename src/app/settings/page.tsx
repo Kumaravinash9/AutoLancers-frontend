@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote } from "@/components/ui";
+import { Button, Card, Empty, ErrorNote, Page } from "@/components/ui";
 import { API_URL, api, AuthStatus } from "@/lib/api";
 
 export default function SettingsPage() {
@@ -56,7 +56,7 @@ function Settings() {
   }, []);
 
   return (
-    <div className="space-y-5">
+    <Page className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold">Settings</h1>
         <p className="mt-1 text-sm text-muted">Connection to Freelancer.com.</p>
@@ -122,6 +122,6 @@ function Settings() {
           <strong>Fetch now</strong> on the queue to trigger a cycle by hand.
         </p>
       </Card>
-    </div>
+    </Page>
   );
 }

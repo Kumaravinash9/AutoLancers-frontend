@@ -2,6 +2,12 @@
 
 import { ReactNode } from "react";
 
+/** Standard content column. The root layout is full-bleed so the marketing page can run edge to
+ *  edge, which means every app screen sets its own width and padding. */
+export function Page({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`mx-auto w-full max-w-5xl px-6 py-8 ${className}`}>{children}</div>;
+}
+
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div className={`rounded-lg border border-border bg-surface p-4 ${className}`}>{children}</div>

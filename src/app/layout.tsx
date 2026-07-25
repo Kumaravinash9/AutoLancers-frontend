@@ -12,6 +12,7 @@ const NAV = [
   { href: "/", label: "Queue" },
   { href: "/profile", label: "Profile" },
   { href: "/settings", label: "Settings" },
+  { href: "/product", label: "What it does" },
 ];
 
 export default function RootLayout({
@@ -39,7 +40,9 @@ export default function RootLayout({
             </span>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">{children}</main>
+        {/* No content box here on purpose: the marketing page runs edge to edge, so each page
+            owns its own width and padding via <Page>. */}
+        <main className="flex-1">{children}</main>
       </body>
     </html>
   );
