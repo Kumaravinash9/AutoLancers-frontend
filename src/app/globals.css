@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background: #fbfaf8;
+  --surface: #ffffff;
+  --border: #e6e2db;
+  --foreground: #1c1a17;
+  --muted: #6f6a62;
+  --accent: #b4531f;
+  --accent-soft: #f6ece5;
+  --good: #2f6f4e;
+  --warn: #8a6d1f;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #131211;
+    --surface: #1c1a19;
+    --border: #302c29;
+    --foreground: #ece8e3;
+    --muted: #9a938a;
+    --accent: #e0824a;
+    --accent-soft: #2a201a;
+    --good: #6db98d;
+    --warn: #d6b45c;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Preserve the newlines in a drafted proposal without a <pre> font change. */
+.proposal {
+  white-space: pre-wrap;
 }
