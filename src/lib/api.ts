@@ -318,8 +318,79 @@ export interface ProposalStats {
   awaiting_outcome: number;
 }
 
+export interface SyncReport {
+  fetched: number;
+  linked: number;
+  imported: number;
+  projects_added: number;
+  outcomes_updated: number;
+  error: string | null;
+}
+
 export const proposals = {
+  sync: () => request<SyncReport>("/proposals/sync", { method: "POST" }),
   list: (status?: ProposalRow["status"]) =>
     request<ProposalRow[]>(`/proposals${status ? `?status=${status}` : ""}`),
   stats: () => request<ProposalStats>("/proposals/stats"),
+};
+
+
+export interface Connection {
+  platform: string;
+  platform_username: string | null;
+  scope: string | null;
+  rating: number | null;
+  total_reviews: number | null;
+  status: string;
+  connected_at: string | null;
+  last_synced_at: string | null;
+}
+
+export interface ProfileCard {
+  id: string;
+  display_name: string;
+  headline: string;
+  profile_image: string | null;
+  initials: string;
+  skills: string[];
+  skill_count: number;
+  rate_min: number;
+  rate_max: number;
+  currency: string;
+  availability: string;
+  status: string;
+  platforms: string[];
+  last_synced_at: string | null;
+  bids_synced_at: string | null;
+  recommendations: number;
+  proposals: number;
+  wins: number;
+}
+
+export interface ProfileDetail extends ProfileCard {
+  bio: string;
+  weighted_skills: { name: string; weight: number }[];
+  portfolio: Record<string, unknown>[];
+  experience: Record<string, unknown>[];
+  education: Record<string, unknown>[];
+  keywords_include: string[];
+  keywords_exclude: string[];
+  fixed_project_min: number;
+  max_existing_bids: number;
+  min_match_score: number;
+  weight_skills: number;
+  weight_budget: number;
+  weight_competition: number;
+  weight_recency: number;
+  proposal_notes: string;
+  connections: Connection[];
+  avg_score: number | null;
+  bids_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const profiles = {
+  list: () => request<ProfileCard[]>("/profiles"),
+  get: (id: string) => request<ProfileDetail>(`/profiles/${id}`),
 };

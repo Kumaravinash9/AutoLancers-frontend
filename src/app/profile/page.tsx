@@ -1,257 +1,196 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, Field, Page, inputClass } from "@/components/ui";
-import { api, formatAge, Profile } from "@/lib/api";
+import { Card, Empty, ErrorNote, Page } from "@/components/ui";
+import { api, formatAge, ProfileCard, profiles, proposals } from "@/lib/api";
+import { Button } from "@/components/ui";
 
-export default function ProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [skillsText, setSkillsText] = useState("");
+/**
+ * Profile browse view.
+ *
+ * A card carries only what identifies a profile — face, name, headline, a few skills. Everything
+ * that only matters once you've chosen one lives behind the click, which is also why the API is
+ * split in two: rendering a name shouldn't ship a portfolio.
+ */
+export default function ProfilesPage() {
+  const [cards, setCards] = useState<ProfileCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
-        const result = await api.getProfile();
-        setProfile(result);
-        setSkillsText(result.skills.map((s) => `${s.name}:${s.weight}`).join("\n"));
+        const list = await profiles.list();
+        if (!cancelled) setCards(list);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load profile");
+        if (!cancelled) setError(err instanceof Error ? err.message : "Could not load profiles");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  function set<K extends keyof Profile>(key: K, value: Profile[K]) {
-    setProfile((p) => (p ? { ...p, [key]: value } : p));
-  }
-
-  async function save(thenRescore: boolean) {
-    if (!profile) return;
-    setSaving(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const skills = skillsText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [name, weight] = line.split(":");
-          return { name: name.trim(), weight: Number(weight ?? 1) || 1 };
-        })
-        .filter((s) => s.name);
-
-      const saved = await api.saveProfile({ ...profile, skills });
-      setProfile(saved);
-
-      if (thenRescore) {
-        const { rescored } = await api.rescore();
-        setNotice(`Saved, and re-scored ${rescored} stored job${rescored === 1 ? "" : "s"}.`);
-      } else {
-        setNotice("Saved. Stored jobs keep their old scores until you re-score.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   if (loading) return <Page><Empty>Loading…</Empty></Page>;
-  if (!profile) return <Page><ErrorNote>{error ?? "Could not load the profile."}</ErrorNote></Page>;
+  if (error) return <Page><ErrorNote>{error}</ErrorNote></Page>;
 
   return (
-    <Page className="space-y-5">
+    <Page className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Profile</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight">Profiles</h1>
         <p className="mt-1 text-sm text-muted">
-          This drives both scoring and the proposal drafts. Expect to tune it for the first week —
-          the queue is only as good as what&apos;s here.
+          Open one to see its skills, rates and connected marketplaces.
         </p>
-        <SyncStatus profile={profile} />
       </div>
 
-      {error && <ErrorNote>{error}</ErrorNote>}
-      {notice && <ErrorNote>{notice}</ErrorNote>}
-
-      <Card className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Identity</h2>
-        <Field label="Name or brand">
-          <input
-            className={inputClass}
-            value={profile.display_name}
-            onChange={(e) => set("display_name", e.target.value)}
-          />
-        </Field>
-        <Field label="Headline">
-          <input
-            className={inputClass}
-            value={profile.headline}
-            onChange={(e) => set("headline", e.target.value)}
-          />
-        </Field>
-        <Field
-          label="Proof points and standard offer"
-          hint="Injected into the draft as facts. Only put things here that are true and that a client could verify."
-        >
-          <textarea
-            className={`${inputClass} min-h-28`}
-            value={profile.proposal_notes}
-            onChange={(e) => set("proposal_notes", e.target.value)}
-          />
-        </Field>
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Matching</h2>
-        <Field label="Skills" hint="One per line, as name:weight — e.g. next.js:5">
-          <textarea
-            className={`${inputClass} min-h-40 font-mono text-xs`}
-            value={skillsText}
-            onChange={(e) => setSkillsText(e.target.value)}
-          />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Must include (comma separated)" hint="Leave empty to allow anything">
-            <input
-              className={inputClass}
-              value={profile.keywords_include.join(", ")}
-              onChange={(e) => set("keywords_include", splitList(e.target.value))}
-            />
-          </Field>
-          <Field label="Never show (comma separated)">
-            <input
-              className={inputClass}
-              value={profile.keywords_exclude.join(", ")}
-              onChange={(e) => set("keywords_exclude", splitList(e.target.value))}
-            />
-          </Field>
+      {cards.length === 0 ? (
+        <Empty>No profiles yet.</Empty>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {cards.map((card) => (
+            <ProfileTile key={card.id} card={card} />
+          ))}
         </div>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <NumberField
-            label="Fixed min"
-            value={profile.fixed_project_min}
-            onChange={(v) => set("fixed_project_min", v)}
-          />
-          <NumberField
-            label="Hourly min"
-            value={profile.rate_min}
-            onChange={(v) => set("rate_min", v)}
-          />
-          <NumberField
-            label="Max bids"
-            value={profile.max_existing_bids}
-            onChange={(v) => set("max_existing_bids", v)}
-          />
-          <NumberField
-            label="Min score"
-            value={profile.min_match_score}
-            onChange={(v) => set("min_match_score", v)}
-          />
-        </div>
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Score weights
-        </h2>
-        <p className="text-sm text-muted">
-          Relative, not percentages — they&apos;re normalised, so only the ratios matter.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <NumberField
-            label="Skills"
-            value={profile.weight_skills}
-            onChange={(v) => set("weight_skills", v)}
-          />
-          <NumberField
-            label="Budget"
-            value={profile.weight_budget}
-            onChange={(v) => set("weight_budget", v)}
-          />
-          <NumberField
-            label="Competition"
-            value={profile.weight_competition}
-            onChange={(v) => set("weight_competition", v)}
-          />
-          <NumberField
-            label="Recency"
-            value={profile.weight_recency}
-            onChange={(v) => set("weight_recency", v)}
-          />
-        </div>
-      </Card>
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant="primary" onClick={() => save(true)} disabled={saving}>
-          {saving ? "Saving…" : "Save and re-score"}
-        </Button>
-        <Button onClick={() => save(false)} disabled={saving}>
-          Save only
-        </Button>
-      </div>
+      )}
     </Page>
   );
 }
 
-/**
- * When this profile last had the marketplace re-read against it.
- *
- * Marketplace profiles drift — rates change, skills get added, a listing's requirements move —
- * so a score is only as current as the sync it was computed from. Showing the age of that sync
- * is what stops a confident-looking number from quietly being stale.
- */
-function SyncStatus({ profile }: { profile: Profile }) {
-  const synced = profile.last_synced_at;
-  // Staleness is decided by the server: reading the clock here would make the component
-  // non-deterministic, and a skewed client clock shouldn't flag good data as old.
-  const stale = profile.sync_is_stale;
+function ProfileTile({ card }: { card: ProfileCard }) {
+  const [syncing, setSyncing] = useState<null | "board" | "bids">(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function sync(kind: "board" | "bids") {
+    setSyncing(kind);
+    setResult(null);
+    try {
+      if (kind === "board") {
+        const r = await api.runPipeline();
+        setResult(
+          r.error ?? `${r.fetched} fetched · ${r.new} new · ${r.drafted} drafted`,
+        );
+      } else {
+        const r = await proposals.sync();
+        setResult(
+          r.error ??
+            `${r.fetched} bids · ${r.imported} imported · ${r.outcomes_updated} outcomes`,
+        );
+      }
+    } catch (err) {
+      setResult(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setSyncing(null);
+    }
+  }
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs">
-      <span className={stale ? "text-warn" : "text-muted"}>
-        {synced ? `Board synced ${formatAge(synced)}` : "Never synced"}
-      </span>
-      <span className="text-muted">Profile edited {formatAge(profile.updated_at)}</span>
-      {stale && (
-        <span className="text-warn">
-          — scores may be out of date. Run a fetch from the queue.
-        </span>
-      )}
-    </div>
+    <Card className="flex h-full flex-col gap-4">
+      <div className="group flex items-start gap-3">
+        <Avatar image={card.profile_image} initials={card.initials} />
+        <div className="min-w-0">
+          <Link
+            href={`/profile/${card.id}`}
+            className="block truncate font-display font-semibold tracking-tight hover:text-accent"
+          >
+            {card.display_name}
+          </Link>
+          <p className="mt-0.5 line-clamp-2 text-sm text-muted">
+            {card.headline || "No headline set"}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {card.skills.slice(0, 5).map((skill) => (
+          <SkillTag key={skill}>{skill}</SkillTag>
+        ))}
+        {card.skill_count > 5 && (
+          <span className="rounded-full px-2 py-0.5 font-mono text-[0.7rem] text-muted">
+            +{card.skill_count - 5}
+          </span>
+        )}
+      </div>
+
+      <dl className="mt-auto grid grid-cols-3 gap-2 border-t border-border pt-3 text-center">
+        {[
+          ["Matches", card.recommendations],
+          ["Bids", card.proposals],
+          ["Won", card.wins],
+        ].map(([label, value]) => (
+          <div key={String(label)}>
+            <dt className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-muted">
+              {label}
+            </dt>
+            <dd className="font-display text-lg font-semibold tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {/* Two syncs, named for what they fetch. Collapsing them into one button would hide that
+          one reads the marketplace for new work and the other reads back your own results. */}
+      <div className="space-y-2 border-t border-border pt-3">
+        <dl className="grid gap-1 font-mono text-[0.7rem] text-muted">
+          <div className="flex justify-between gap-2">
+            <dt>Board</dt>
+            <dd>{card.last_synced_at ? formatAge(card.last_synced_at) : "never"}</dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt>Your bids</dt>
+            <dd>{card.bids_synced_at ? formatAge(card.bids_synced_at) : "never synced"}</dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt>Marketplaces</dt>
+            <dd>{card.platforms.length > 0 ? card.platforms.join(", ") : "none"}</dd>
+          </div>
+        </dl>
+
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => sync("board")} disabled={syncing !== null}>
+            {syncing === "board" ? "Fetching…" : "Fetch jobs"}
+          </Button>
+          <Button onClick={() => sync("bids")} disabled={syncing !== null}>
+            {syncing === "bids" ? "Syncing…" : "Sync my bids"}
+          </Button>
+        </div>
+
+        {result && <p className="font-mono text-[0.7rem] text-muted">{result}</p>}
+      </div>
+    </Card>
   );
 }
 
-function NumberField({
-  label,
-  value,
-  onChange,
+export function Avatar({
+  image,
+  initials,
+  size = "h-12 w-12 text-sm",
 }: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
+  image: string | null;
+  initials: string;
+  size?: string;
 }) {
+  if (image) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={image} alt="" className={`${size} shrink-0 rounded-full object-cover`} />;
+  }
   return (
-    <Field label={label}>
-      <input
-        type="number"
-        className={inputClass}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-    </Field>
+    <span
+      aria-hidden="true"
+      className={`${size} grid shrink-0 place-items-center rounded-full bg-accent-soft font-display font-semibold text-accent`}
+    >
+      {initials}
+    </span>
   );
 }
 
-function splitList(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+export function SkillTag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs">
+      {children}
+    </span>
+  );
 }
