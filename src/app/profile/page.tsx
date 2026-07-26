@@ -16,11 +16,11 @@ import {
 import { Button } from "@/components/ui";
 
 /**
- * Profile browse view.
+ * Connected accounts.
  *
- * A card carries only what identifies a profile — face, name, headline, a few skills. Everything
- * that only matters once you've chosen one lives behind the click, which is also why the API is
- * split in two: rendering a name shouldn't ship a portfolio.
+ * A card carries only what identifies an account — face, handle, tagline, its bid record, a few
+ * of its skills. Everything that only matters once you've opened one lives behind the click,
+ * which is also why the API is split in two: rendering a handle shouldn't ship a bid history.
  */
 export default function ProfilesPage() {
   const { accountId, select } = useAccountScope();
@@ -59,7 +59,7 @@ export default function ProfilesPage() {
         <p className="mt-1 text-sm text-muted">
           {accounts.length === 0
             ? "Connect a marketplace to start seeing work."
-            : `${accounts.length} connected · all scored by ${profile?.display_name ?? "your profile"}. Open one for its bids and history.`}
+            : `${accounts.length} connected. Open one for its skills, bids and history.`}
         </p>
       </div>
 
@@ -85,8 +85,8 @@ export default function ProfilesPage() {
  * One card per connected marketplace account.
  *
  * A single card listing several accounts inside it read as one thing with a footnote. They are
- * separate accounts with separate results, so they get separate cards — and the shared profile
- * line on each says plainly that the skills and scoring rules are common to all of them.
+ * separate accounts with separate results — different handles, skills and win records — so they
+ * get separate cards.
  */
 function AccountCard({
   account,
@@ -188,11 +188,10 @@ function AccountCard({
         </div>
       </dl>
 
-      {/* The account's own skills as the marketplace lists them — what a client sees. Our
-          scoring profile is separate and linked from the detail page. */}
+      {/* The account's own skills as the marketplace lists them — what a client sees. */}
       <div className="space-y-1.5">
-        <p className="font-mono text-[0.7rem] text-muted">
-          {account.tagline || `Scored by ${profile.display_name}`}
+        <p className="line-clamp-1 font-mono text-[0.7rem] text-muted">
+          {account.tagline || "No tagline set"}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {account.account_skills.slice(0, 4).map((skill) => (
@@ -290,7 +289,7 @@ function ConnectCard() {
         <span>
           <span className="block font-display font-semibold">Connect an account</span>
           <span className="mt-1 block text-sm text-muted">
-            Add another marketplace account, scored by the same profile.
+            Add another marketplace account to watch and bid from.
           </span>
         </span>
       </button>

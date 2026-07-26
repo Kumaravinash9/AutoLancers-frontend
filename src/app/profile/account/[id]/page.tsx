@@ -181,7 +181,7 @@ export default function AccountDetailPage() {
             </span>
             {profile && (
               <Link href={`/profile/${profile.id}`} className="hover:text-accent">
-                scored by {profile.display_name} →
+                matching rules →
               </Link>
             )}
           </div>
