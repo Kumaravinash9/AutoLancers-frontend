@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useAccountScope } from "@/components/account-scope";
 import { Card, Empty, ErrorNote, Page } from "@/components/ui";
 import {
   API_URL,
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui";
  * split in two: rendering a name shouldn't ship a portfolio.
  */
 export default function ProfilesPage() {
+  const { accountId, select } = useAccountScope();
   const [profile, setProfile] = useState<ProfileCard | null>(null);
   const [accounts, setAccounts] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export default function ProfilesPage() {
         <p className="mt-1 text-sm text-muted">
           {accounts.length === 0
             ? "Connect a marketplace to start seeing work."
-            : `${accounts.length} connected · all scored by ${profile?.display_name ?? "your profile"}.`}
+            : `${accounts.length} connected · all scored by ${profile?.display_name ?? "your profile"}. Open one for its bids and history.`}
         </p>
       </div>
 
@@ -68,7 +70,12 @@ export default function ProfilesPage() {
               key={account.id}
               account={account}
               profile={profile}
-              onRemoved={(id) => setAccounts((prev) => prev.filter((a) => a.id !== id))}
+              selected={accountId === account.id}
+              onSelect={() => select(accountId === account.id ? null : account.id)}
+              onRemoved={(id) => {
+                if (accountId === id) select(null);
+                setAccounts((prev) => prev.filter((a) => a.id !== id));
+              }}
             />
           ))}
         <ConnectCard />
@@ -87,10 +94,14 @@ export default function ProfilesPage() {
 function AccountCard({
   account,
   profile,
+  selected,
+  onSelect,
   onRemoved,
 }: {
   account: Connection;
   profile: ProfileCard;
+  selected: boolean;
+  onSelect: () => void;
   onRemoved: (id: string) => void;
 }) {
   const [syncing, setSyncing] = useState(false);
@@ -129,28 +140,44 @@ function AccountCard({
   }
 
   return (
-    <Card className="flex h-full flex-col gap-4">
+    <Card
+      className={`flex h-full flex-col gap-4 transition-colors ${
+        selected ? "border-accent" : ""
+      }`}
+    >
       <div className="flex items-start gap-3">
         <Avatar
           image={account.avatar_url}
           initials={(account.platform_username ?? account.platform).slice(0, 2).toUpperCase()}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display font-semibold tracking-tight">
+          <Link
+            href={`/profile/account/${account.id}`}
+            className="block truncate font-display font-semibold tracking-tight hover:text-accent"
+          >
             {account.platform_username ?? "unnamed account"}
-          </p>
+          </Link>
           <p className="mt-0.5 font-mono text-xs text-muted">
             {account.platform}
             {account.rating ? ` · ${account.rating}★ (${account.total_reviews ?? 0})` : ""}
           </p>
         </div>
-        <span
-          className={`rounded px-1.5 py-0.5 font-mono text-[0.65rem] ${
-            account.status === "ACTIVE" ? "bg-good/15 text-good" : "bg-warn/15 text-warn"
-          }`}
-        >
-          {account.status.toLowerCase()}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={`rounded px-1.5 py-0.5 font-mono text-[0.65rem] ${
+              account.status === "ACTIVE" ? "bg-good/15 text-good" : "bg-warn/15 text-warn"
+            }`}
+          >
+            {account.status.toLowerCase()}
+          </span>
+          {/* Which account the rest of the app is filtered to. Without it, the navbar picker is
+              the only place that says, and it's easy to forget a filter is on. */}
+          {selected && (
+            <span className="rounded bg-accent px-1.5 py-0.5 font-mono text-[0.65rem] text-white">
+              showing
+            </span>
+          )}
+        </div>
       </div>
 
       <dl className="grid grid-cols-2 gap-2 border-y border-border py-3 text-center">
@@ -197,8 +224,17 @@ function AccountCard({
       </dl>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="primary" onClick={sync} disabled={syncing}>
-          {syncing ? "Syncing…" : "Sync now"}
+        <Link
+          href={`/profile/account/${account.id}`}
+          className="inline-flex items-center rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+        >
+          Open
+        </Link>
+        <Button onClick={sync} disabled={syncing}>
+          {syncing ? "Syncing…" : "Sync"}
+        </Button>
+        <Button variant="ghost" onClick={onSelect}>
+          {selected ? "Show all" : "Show only this"}
         </Button>
         <Button variant="ghost" onClick={disconnect}>
           Disconnect
