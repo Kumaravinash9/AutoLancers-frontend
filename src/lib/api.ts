@@ -352,6 +352,16 @@ export interface Connection {
   total_reviews: number | null;
   avatar_url: string | null;
   status: string;
+  /** The account's own public profile on the marketplace, refreshed on every sync. */
+  display_name: string | null;
+  tagline: string | null;
+  summary: string | null;
+  account_skills: string[];
+  hourly_rate: number | null;
+  currency: string | null;
+  country: string | null;
+  portfolio_count: number | null;
+  member_since: string | null;
   connected_at: string | null;
   last_synced_at: string | null;
 }

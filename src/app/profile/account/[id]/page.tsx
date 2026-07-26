@@ -20,9 +20,10 @@ import {
 /**
  * One connected marketplace account, in full.
  *
- * The account supplies the identity — handle, picture, rating, reviews — and its own bid history.
- * The skills and matching rules come from the profile that scores it, which is shared across every
- * account, so they are labelled as such rather than presented as this account's own.
+ * Everything shown here belongs to the account itself — the picture, handle, tagline, summary,
+ * skills, rate and reviews as the marketplace holds them, plus every bid placed from it. Our
+ * scoring profile is a separate thing and gets a link, not a panel: someone opening an account
+ * wants to see what a client would see, not how we rank jobs for it.
  *
  * Built from endpoints that already exist: the connections list, the profile detail, and the
  * proposals list scoped by connection.
@@ -141,28 +142,49 @@ export default function AccountDetailPage() {
           size="h-20 w-20 text-xl"
         />
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-semibold tracking-tight">{handle}</h1>
-          {/* A rating only appears once the marketplace has one to give. Printing "0★ from 0
-              reviews" would read as a bad score rather than an absent one. */}
-          <p className="mt-1 text-muted">
-            {account.platform === "freelancer" ? "Freelancer.com" : account.platform}
-            {account.rating
-              ? ` · ${account.rating}★ from ${account.total_reviews ?? 0} reviews`
-              : " · no rating yet"}
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            {account.display_name || handle}
+          </h1>
+          {/* The tagline is the account's own one-liner. Falling back to the platform name keeps
+              the line from collapsing on an account that hasn't written one. */}
+          <p className="mt-1 max-w-2xl text-muted">
+            {account.tagline || `${platformName(account.platform)} account`}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-muted">
-            <span>{account.status.toLowerCase()}</span>
-            {account.connected_at && (
-              <span>connected {new Date(account.connected_at).toLocaleDateString()}</span>
-            )}
+            <span>@{handle}</span>
+            {account.country && <span>{account.country}</span>}
+            {account.hourly_rate ? (
+              <span>
+                {account.hourly_rate} {account.currency ?? ""}/hr
+              </span>
+            ) : null}
+            {/* A rating only appears once the marketplace has one to give. Printing "0★ from 0
+                reviews" would read as a bad score rather than an absent one. */}
             <span>
-              bids {account.last_synced_at ? `synced ${formatAge(account.last_synced_at)}` : "never synced"}
+              {account.rating
+                ? `${account.rating}★ from ${account.total_reviews ?? 0} reviews`
+                : "no rating yet"}
+            </span>
+            {account.member_since && (
+              <span>member since {new Date(account.member_since).getFullYear()}</span>
+            )}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-muted">
+            <span>{account.status.toLowerCase()}</span>
+            <span>
+              bids{" "}
+              {account.last_synced_at ? `synced ${formatAge(account.last_synced_at)}` : "never synced"}
             </span>
             {/* The granted scope decides whether bidding from here is even possible, so say it
                 outright instead of counting tokens in a string nobody can see. */}
             <span title={account.scope ?? "no scope recorded"}>
               {account.scope?.includes("bid") ? "can place bids" : "read only"}
             </span>
+            {profile && (
+              <Link href={`/profile/${profile.id}`} className="hover:text-accent">
+                scored by {profile.display_name} →
+              </Link>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -189,7 +211,7 @@ export default function AccountDetailPage() {
         </ul>
       )}
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Bids placed" value={account.proposals} />
         <Stat label="Won" value={account.wins} />
         <Stat
@@ -197,39 +219,34 @@ export default function AccountDetailPage() {
           value={bids.filter((b) => b.was_recommended).length}
           note="the rest you found yourself"
         />
+        {account.portfolio_count !== null && (
+          <Stat label="Portfolio items" value={account.portfolio_count} note="on the marketplace" />
+        )}
       </section>
 
-      {profile && (
-        <Section
-          title="Scored by"
-          aside={
-            <Link href={`/profile/${profile.id}`} className="text-xs text-muted hover:text-accent">
-              Open profile →
-            </Link>
-          }
-        >
-          <Card className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Avatar image={profile.profile_image} initials={profile.initials} />
-              <div className="min-w-0">
-                <p className="font-medium">{profile.display_name}</p>
-                <p className="text-sm text-muted">{profile.headline || "No headline set"}</p>
-              </div>
-            </div>
-            {profile.bio && <p className="text-sm leading-relaxed text-muted">{profile.bio}</p>}
-            <div className="flex flex-wrap gap-1.5">
-              {profile.weighted_skills.map((skill) => (
-                <SkillTag key={String(skill.name)}>{String(skill.name)}</SkillTag>
-              ))}
-            </div>
-            {/* Shared, not per account — worth saying, since the same rules decide what every
-                connected account sees. */}
-            <p className="font-mono text-xs text-muted">
-              Same skills and rules apply to every account you connect.
-            </p>
-          </Card>
+      {/* Everything below comes from the marketplace, not from us — this is the account as a
+          client browsing Freelancer.com would find it. */}
+      {account.summary && (
+        <Section title="Summary">
+          <p className="max-w-3xl whitespace-pre-wrap leading-relaxed text-muted">
+            {account.summary}
+          </p>
         </Section>
       )}
+
+      <Section title={`Skills on this account · ${account.account_skills.length}`}>
+        {account.account_skills.length === 0 ? (
+          <Empty>
+            No skills listed on this account. Add them on {platformName(account.platform)} and sync.
+          </Empty>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {account.account_skills.map((skill) => (
+              <SkillTag key={skill}>{skill}</SkillTag>
+            ))}
+          </div>
+        )}
+      </Section>
 
       <Section title={`Bids from this account · ${bids.length}`}>
         {bids.length === 0 ? (
@@ -273,6 +290,10 @@ export default function AccountDetailPage() {
       </Section>
     </Page>
   );
+}
+
+function platformName(platform: string): string {
+  return platform === "freelancer" ? "Freelancer.com" : platform;
 }
 
 function Section({

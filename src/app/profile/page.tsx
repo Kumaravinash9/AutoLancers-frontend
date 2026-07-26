@@ -191,23 +191,23 @@ function AccountCard({
         </div>
       </dl>
 
-      {/* Scoring is per profile, not per account. Saying so here stops the shared skills from
-          looking like they belong to this account alone. */}
+      {/* The account's own skills as the marketplace lists them — what a client sees. Our
+          scoring profile is separate and linked from the detail page. */}
       <div className="space-y-1.5">
-        <Link
-          href={`/profile/${profile.id}`}
-          className="font-mono text-[0.7rem] text-muted hover:text-accent"
-        >
-          Scored by {profile.display_name} →
-        </Link>
+        <p className="font-mono text-[0.7rem] text-muted">
+          {account.tagline || `Scored by ${profile.display_name}`}
+        </p>
         <div className="flex flex-wrap gap-1.5">
-          {profile.skills.slice(0, 4).map((skill) => (
+          {account.account_skills.slice(0, 4).map((skill) => (
             <SkillTag key={skill}>{skill}</SkillTag>
           ))}
-          {profile.skill_count > 4 && (
+          {account.account_skills.length > 4 && (
             <span className="rounded-full px-2 py-0.5 font-mono text-[0.7rem] text-muted">
-              +{profile.skill_count - 4}
+              +{account.account_skills.length - 4}
             </span>
+          )}
+          {account.account_skills.length === 0 && (
+            <span className="font-mono text-[0.7rem] text-muted">no skills listed yet</span>
           )}
         </div>
       </div>
