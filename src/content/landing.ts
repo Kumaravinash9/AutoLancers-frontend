@@ -12,7 +12,7 @@ export const HERO = {
     "AutoLancers reads the job boards so you don't. It scores every listing against your " +
     "actual skills and rates, sets the rest aside, and has the proposal drafted before you open it.",
   primaryCta: "Start free",
-  secondaryCta: "Sign in",
+  secondaryCta: "Book a demo",
   fineprint: "Free while in early access · Connect in one click · Cancel any time",
 };
 
@@ -247,6 +247,7 @@ export const CLOSE = {
   fineprint: "No card required · Cancel any time",
   primaryCta: "Create your account",
   secondaryCta: "Sign in",
+  tertiaryCta: "Book a demo",
 };
 
 export const FOOTER = {

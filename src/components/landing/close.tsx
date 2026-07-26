@@ -74,6 +74,12 @@ export function Close() {
             >
               {CLOSE.secondaryCta}
             </Link>
+            <Link
+              href={AUTH_LINKS.demo}
+              className="rounded-md border border-white/15 px-5 py-2.5 font-medium transition-colors hover:bg-white/5"
+            >
+              {CLOSE.tertiaryCta}
+            </Link>
           </div>
 
           <p className="font-mono text-xs text-deep-muted">{CLOSE.fineprint}</p>

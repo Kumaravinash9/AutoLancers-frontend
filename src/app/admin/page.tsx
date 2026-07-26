@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Card, Empty, ErrorNote, Page } from "@/components/ui";
-import { admin, AdminOverview, AdminUser, CycleRun } from "@/lib/api";
+import { admin, AdminOverview, AdminUser, CycleRun, demo, DemoRequest, formatAge } from "@/lib/api";
 
 /**
  * Operator view.
@@ -15,6 +15,7 @@ export default function AdminPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [cycles, setCycles] = useState<CycleRun[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [demos, setDemos] = useState<DemoRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,11 +23,17 @@ export default function AdminPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const [o, c, u] = await Promise.all([admin.overview(), admin.cycles(15), admin.users()]);
+        const [o, c, u, d] = await Promise.all([
+          admin.overview(),
+          admin.cycles(15),
+          admin.users(),
+          demo.list(),
+        ]);
         if (!cancelled) {
           setOverview(o);
           setCycles(c);
           setUsers(u);
+          setDemos(d);
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not load");
@@ -155,6 +162,48 @@ export default function AdminPage() {
                           ok{c.authenticated ? "" : " · unauthenticated"}
                         </span>
                       )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-mono text-xs uppercase tracking-[0.14em] text-muted">
+          Demo requests · {demos.length}
+        </h2>
+        {demos.length === 0 ? (
+          <Empty>Nobody has asked for a walkthrough yet.</Empty>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left font-mono text-[0.7rem] uppercase tracking-wider text-muted">
+                  <th className="p-2.5 font-normal">Who</th>
+                  <th className="p-2.5 font-normal">Bids on</th>
+                  <th className="p-2.5 font-normal">Wants to see</th>
+                  <th className="p-2.5 font-normal">Asked</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demos.map((d) => (
+                  <tr key={d.id} className="border-b border-border last:border-0 align-top">
+                    <td className="p-2.5">
+                      <span className="block">{d.name}</span>
+                      <a
+                        href={`mailto:${d.email}`}
+                        className="font-mono text-xs text-muted hover:text-accent"
+                      >
+                        {d.email}
+                      </a>
+                    </td>
+                    <td className="p-2.5 text-muted">{d.marketplace ?? "not bidding yet"}</td>
+                    <td className="max-w-md p-2.5 text-muted">{d.note ?? "—"}</td>
+                    <td className="whitespace-nowrap p-2.5 font-mono text-xs text-muted">
+                      {formatAge(d.created_at)}
                     </td>
                   </tr>
                 ))}

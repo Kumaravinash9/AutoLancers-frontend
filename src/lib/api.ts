@@ -444,3 +444,21 @@ export const profiles = {
   list: () => request<ProfileCard[]>("/profiles"),
   get: (id: string) => request<ProfileDetail>(`/profiles/${id}`),
 };
+
+
+export interface DemoRequest {
+  id: string;
+  name: string;
+  email: string;
+  note: string | null;
+  marketplace: string | null;
+  handled: boolean;
+  created_at: string;
+}
+
+export const demo = {
+  /** Public — no account needed, which is the whole point of the marketing page. */
+  request: (body: { name: string; email: string; note?: string; marketplace?: string }) =>
+    request<DemoRequest>("/demo-requests", { method: "POST", body: JSON.stringify(body) }),
+  list: () => request<DemoRequest[]>("/admin/demo-requests"),
+};

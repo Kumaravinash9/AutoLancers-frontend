@@ -57,12 +57,21 @@ export function SiteNav() {
                 </Link>
               ))}
             </nav>
-            <nav className="flex items-center gap-5 text-sm">
+            {/* Escalating weight left to right: a plain link to come back, an outlined button for
+                the slower path, the filled one for the action we actually want. Two filled
+                buttons would make neither read as the primary. */}
+            <nav className="flex items-center gap-3 text-sm">
               <Link
                 href={AUTH_LINKS.signIn}
-                className="border-b-2 border-transparent pb-0.5 text-muted transition-colors hover:border-border hover:text-foreground"
+                className="hidden border-b-2 border-transparent pb-0.5 text-muted transition-colors hover:border-border hover:text-foreground sm:inline"
               >
                 Sign in
+              </Link>
+              <Link
+                href={AUTH_LINKS.demo}
+                className="rounded-md border border-border px-3.5 py-1.5 font-medium transition-colors hover:border-accent hover:bg-accent-soft"
+              >
+                Book a demo
               </Link>
               <Link
                 href={AUTH_LINKS.signUp}

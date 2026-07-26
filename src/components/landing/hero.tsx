@@ -30,8 +30,8 @@ export function Hero() {
             {HERO.primaryCta}
           </Link>
           <Link
-            href={AUTH_LINKS.signIn}
-            className="rounded-md border border-border px-5 py-2.5 font-medium transition-colors hover:bg-accent-soft"
+            href={AUTH_LINKS.demo}
+            className="rounded-md border border-border px-5 py-2.5 font-medium transition-colors hover:border-accent hover:bg-accent-soft"
           >
             {HERO.secondaryCta}
           </Link>

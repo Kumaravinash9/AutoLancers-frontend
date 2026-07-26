@@ -5,6 +5,7 @@ export const BRAND = { prefix: "Auto", suffix: "Lancers" };
 export const AUTH_LINKS = {
   signIn: "/login",
   signUp: "/login?mode=signup",
+  demo: "/demo",
 };
 
 export const APP_NAV = [
@@ -23,4 +24,4 @@ export const MARKETING_NAV = [
   { href: "/#faq", label: "FAQ" },
 ];
 
-export const MARKETING_ROUTES = new Set(["/", "/login"]);
+export const MARKETING_ROUTES = new Set(["/", "/login", "/demo"]);
