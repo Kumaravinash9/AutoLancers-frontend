@@ -1,77 +1,24 @@
 @import "tailwindcss";
 
-/* Pine as the primary: in this product green means "this one cleared the bar", which is the
-   whole proposition. Ochre carries numerals so scores read as data, not as branding. */
+/* Navy as the primary: it reads as trust and precision without the "AI SaaS" indigo/purple-blue
+   cliché. Ochre carries numerals so scores read as data, not as branding. Light theme only for
+   now — no dark variant, so nothing here should be conditioned on prefers-color-scheme. */
 :root {
-  --background: #f3f5f4;
+  --background: #f5f4f0;
   --surface: #ffffff;
-  --sunken: #e9edeb;
-  --border: #d7e0dc;
-  --foreground: #101c19;
-  --muted: #5c6b66;
-  --accent: #14563f;
-  --accent-soft: #e2ece7;
-  --figure: #b8791f;
-  --good: #14563f;
+  --sunken: #eae8e2;
+  --border: #dde2e6;
+  --foreground: #101820;
+  --muted: #5b6b75;
+  --accent: #1b3a5c;
+  --accent-soft: #e4eaef;
+  --figure: #b8862e;
+  --good: #1b3a5c;
   --warn: #9a6b12;
 
-  --deep: #0e1a17;
-  --deep-fg: #eef3f1;
-  --deep-muted: #93a49e;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b110f;
-    --surface: #131b19;
-    --sunken: #1a2320;
-    --border: #26312d;
-    --foreground: #e8efec;
-    --muted: #93a49e;
-    --accent: #4fae86;
-    --accent-soft: #16241f;
-    --figure: #d9a04a;
-    --good: #4fae86;
-    --warn: #d9a04a;
-
-    --deep: #070d0c;
-    --deep-fg: #e8efec;
-    --deep-muted: #8b9c96;
-  }
-}
-
-:root[data-theme="dark"] {
-  --background: #0b110f;
-  --surface: #131b19;
-  --sunken: #1a2320;
-  --border: #26312d;
-  --foreground: #e8efec;
-  --muted: #93a49e;
-  --accent: #4fae86;
-  --accent-soft: #16241f;
-  --figure: #d9a04a;
-  --good: #4fae86;
-  --warn: #d9a04a;
-  --deep: #070d0c;
-  --deep-fg: #e8efec;
-  --deep-muted: #8b9c96;
-}
-
-:root[data-theme="light"] {
-  --background: #f3f5f4;
-  --surface: #ffffff;
-  --sunken: #e9edeb;
-  --border: #d7e0dc;
-  --foreground: #101c19;
-  --muted: #5c6b66;
-  --accent: #14563f;
-  --accent-soft: #e2ece7;
-  --figure: #b8791f;
-  --good: #14563f;
-  --warn: #9a6b12;
-  --deep: #0e1a17;
-  --deep-fg: #eef3f1;
-  --deep-muted: #93a49e;
+  --deep: #101e2e;
+  --deep-fg: #eef2f5;
+  --deep-muted: #8fa0ac;
 }
 
 @theme inline {
