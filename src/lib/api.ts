@@ -352,6 +352,8 @@ export interface Connection {
   total_reviews: number | null;
   avatar_url: string | null;
   status: string;
+  /** True for the account the app is scoped to; all false means every account. */
+  is_selected: boolean;
   /** The account's own public profile on the marketplace, refreshed on every sync. */
   display_name: string | null;
   tagline: string | null;
@@ -427,6 +429,12 @@ export interface FullSync {
 export const connections = {
   list: () => request<Connection[]>("/connections"),
   remove: (id: string) => request<void>(`/connections/${id}`, { method: "DELETE" }),
+  /** Scope the app to one account, or to all of them with null. Returns the updated list. */
+  select: (id: string | null) =>
+    request<Connection[]>("/connections/selected", {
+      method: "PUT",
+      body: JSON.stringify({ connection_id: id }),
+    }),
 };
 
 export const profiles = {

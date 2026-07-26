@@ -100,7 +100,6 @@ export default function AccountDetailPage() {
       return;
     try {
       await connectionsApi.remove(account.id);
-      if (accountId === account.id) select(null);
       router.push("/profile");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not disconnect");
@@ -192,10 +191,10 @@ export default function AccountDetailPage() {
             {syncing ? "Syncing…" : "Sync now"}
           </Button>
           <Button
-            onClick={() => select(isSelected ? null : account.id)}
+            onClick={() => void select(isSelected ? null : account.id)}
             title={isSelected ? "Go back to showing every account" : "Filter the app to this one"}
           >
-            {isSelected ? "Showing this account" : "Show only this"}
+            {isSelected ? "Selected" : "Select"}
           </Button>
           <Button variant="ghost" onClick={disconnect}>
             Disconnect

@@ -71,11 +71,8 @@ export default function ProfilesPage() {
               account={account}
               profile={profile}
               selected={accountId === account.id}
-              onSelect={() => select(accountId === account.id ? null : account.id)}
-              onRemoved={(id) => {
-                if (accountId === id) select(null);
-                setAccounts((prev) => prev.filter((a) => a.id !== id));
-              }}
+              onSelect={() => void select(accountId === account.id ? null : account.id)}
+              onRemoved={(id) => setAccounts((prev) => prev.filter((a) => a.id !== id))}
             />
           ))}
         <ConnectCard />
@@ -174,7 +171,7 @@ function AccountCard({
               the only place that says, and it's easy to forget a filter is on. */}
           {selected && (
             <span className="rounded bg-accent px-1.5 py-0.5 font-mono text-[0.65rem] text-white">
-              showing
+              selected
             </span>
           )}
         </div>
@@ -234,7 +231,7 @@ function AccountCard({
           {syncing ? "Syncing…" : "Sync"}
         </Button>
         <Button variant="ghost" onClick={onSelect}>
-          {selected ? "Show all" : "Show only this"}
+          {selected ? "Show all" : "Select"}
         </Button>
         <Button variant="ghost" onClick={disconnect}>
           Disconnect
