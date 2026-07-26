@@ -41,7 +41,9 @@ export function SiteNav() {
       state.cancelled = true;
     };
   }, [pathname]);
-  const marketing = MARKETING_ROUTES.has(pathname);
+  // Only pitch to people who aren't already signed in. Showing "Sign in" to someone with a live
+  // session reads as being logged out, which is alarming on a tool holding your credentials.
+  const marketing = MARKETING_ROUTES.has(pathname) && account === null;
 
   return (
     <header className="border-b border-border bg-surface">
