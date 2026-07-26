@@ -156,7 +156,11 @@ export default function ProfileDetailPage() {
       <Section title="Matching rules">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Min score" value={profile.min_match_score} />
-          <Stat label="Max existing bids" value={profile.max_existing_bids} />
+          <Stat
+            label="Crowded at"
+            value={`${profile.crowded_at_bids} bids`}
+            note="where competition costs half its points"
+          />
           <Stat label="Fixed floor" value={`${profile.fixed_project_min} ${profile.currency}`} />
           <Stat label="Hourly floor" value={`${profile.rate_min} ${profile.currency}`} />
         </div>

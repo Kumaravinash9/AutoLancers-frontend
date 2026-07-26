@@ -145,9 +145,9 @@ export default function ProfilePage() {
             onChange={(v) => set("rate_min", v)}
           />
           <NumberField
-            label="Max bids"
-            value={profile.max_existing_bids}
-            onChange={(v) => set("max_existing_bids", v)}
+            label="Crowded at"
+            value={profile.crowded_at_bids}
+            onChange={(v) => set("crowded_at_bids", v)}
           />
           <NumberField
             label="Min score"

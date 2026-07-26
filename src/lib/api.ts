@@ -71,7 +71,8 @@ export interface Profile {
   fixed_project_min: number;
   rate_min: number;
   currency: string;
-  max_existing_bids: number;
+  /** Bid count at which competition scores half marks. Not a cap — nothing is hidden for being busy. */
+  crowded_at_bids: number;
   min_match_score: number;
   weight_skills: number;
   weight_budget: number;
@@ -398,7 +399,8 @@ export interface ProfileDetail extends ProfileCard {
   keywords_include: string[];
   keywords_exclude: string[];
   fixed_project_min: number;
-  max_existing_bids: number;
+  /** Bid count at which competition scores half marks. Not a cap — nothing is hidden for being busy. */
+  crowded_at_bids: number;
   min_match_score: number;
   weight_skills: number;
   weight_budget: number;
