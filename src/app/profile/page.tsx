@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Card, Empty, ErrorNote, Page } from "@/components/ui";
-import { formatAge, ProfileCard, profiles } from "@/lib/api";
+import {
+  API_URL,
+  Connection,
+  connections as connectionsApi,
+  formatAge,
+  ProfileCard,
+  profiles,
+} from "@/lib/api";
 import { Button } from "@/components/ui";
 
 /**
@@ -62,6 +69,7 @@ export default function ProfilesPage() {
 }
 
 function ProfileTile({ card }: { card: ProfileCard }) {
+  const [accounts, setAccounts] = useState<Connection[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<string[] | null>(null);
 
@@ -84,6 +92,34 @@ function ProfileTile({ card }: { card: ProfileCard }) {
       setResult([err instanceof Error ? err.message : "Sync failed"]);
     } finally {
       setSyncing(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await connectionsApi.list();
+        if (!cancelled) setAccounts(list);
+      } catch {
+        if (!cancelled) setAccounts([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function disconnect(id: string, name: string) {
+    // Removing a credential is easy to do by accident and tedious to undo — it means
+    // re-authorising on the marketplace.
+    if (!window.confirm(`Disconnect ${name}? Your bid history is kept; you'd need to reconnect.`))
+      return;
+    try {
+      await connectionsApi.remove(id);
+      setAccounts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      setResult([err instanceof Error ? err.message : "Could not disconnect"]);
     }
   }
 
@@ -142,11 +178,45 @@ function ProfileTile({ card }: { card: ProfileCard }) {
             <dt>Your bids</dt>
             <dd>{card.bids_synced_at ? formatAge(card.bids_synced_at) : "never synced"}</dd>
           </div>
-          <div className="flex justify-between gap-2">
-            <dt>Marketplaces</dt>
-            <dd>{card.platforms.length > 0 ? card.platforms.join(", ") : "none"}</dd>
-          </div>
         </dl>
+
+        <div className="space-y-1.5">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.1em] text-muted">
+            Accounts
+          </p>
+          {accounts.length === 0 ? (
+            <p className="text-xs text-muted">None connected.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {accounts.map((a) => (
+                <li key={a.id} className="flex items-center gap-2">
+                  <Avatar
+                    image={a.avatar_url}
+                    initials={(a.platform_username ?? a.platform).slice(0, 2).toUpperCase()}
+                    size="h-6 w-6 text-[0.6rem]"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-xs">
+                    {a.platform_username ?? a.platform}
+                    <span className="text-muted"> · {a.platform}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => disconnect(a.id, a.platform_username ?? a.platform)}
+                    className="rounded px-1.5 py-0.5 font-mono text-[0.65rem] text-muted transition-colors hover:text-accent"
+                  >
+                    remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <a
+            href={`${API_URL}/auth/freelancer/login`}
+            className="inline-block font-mono text-[0.7rem] text-accent hover:underline"
+          >
+            + connect another account
+          </a>
+        </div>
 
         <Button variant="primary" onClick={sync} disabled={syncing}>
           {syncing ? "Syncing…" : "Sync now"}

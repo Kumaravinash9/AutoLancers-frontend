@@ -339,11 +339,13 @@ export const proposals = {
 
 
 export interface Connection {
+  id: string;
   platform: string;
   platform_username: string | null;
   scope: string | null;
   rating: number | null;
   total_reviews: number | null;
+  avatar_url: string | null;
   status: string;
   connected_at: string | null;
   last_synced_at: string | null;
@@ -406,6 +408,11 @@ export interface FullSync {
   last_synced_at: string | null;
   bids_synced_at: string | null;
 }
+
+export const connections = {
+  list: () => request<Connection[]>("/connections"),
+  remove: (id: string) => request<void>(`/connections/${id}`, { method: "DELETE" }),
+};
 
 export const profiles = {
   sync: (id: string) => request<FullSync>(`/profiles/${id}/sync`, { method: "POST" }),
