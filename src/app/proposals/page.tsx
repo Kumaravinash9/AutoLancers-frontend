@@ -13,6 +13,16 @@ const STATUS_TONE: Record<ProposalRow["status"], string> = {
   WITHDRAWN: "bg-sunken text-muted",
 };
 
+// The client's word for ACCEPTED is "you were selected", so say that rather than echoing an
+// internal enum at someone reading their own results.
+const STATUS_LABEL: Record<ProposalRow["status"], string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "Sent",
+  ACCEPTED: "Selected",
+  REJECTED: "Not selected",
+  WITHDRAWN: "Withdrawn",
+};
+
 /**
  * Every proposal, paired with the score that recommended it.
  *
@@ -93,11 +103,22 @@ export default function ProposalsPage() {
                     <span
                       className={`rounded px-1.5 py-0.5 font-mono text-[0.7rem] ${STATUS_TONE[row.status]}`}
                     >
-                      {row.status}
+                      {STATUS_LABEL[row.status]}
+                    </span>
+                    <span
+                      className="rounded border border-border px-1.5 py-0.5 font-mono text-[0.7rem] text-muted"
+                      title={
+                        row.was_recommended
+                          ? "AutoLancers surfaced and scored this one"
+                          : "You bid on this without a recommendation from us"
+                      }
+                    >
+                      {row.was_recommended ? "recommended" : "your own find"}
                     </span>
                   </div>
 
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-muted">
+                    <span>{row.freelancer_name}</span>
                     {row.bid_amount !== null && (
                       <span>
                         bid {row.bid_amount.toFixed(0)} {row.currency ?? ""}
@@ -132,8 +153,16 @@ export default function ProposalsPage() {
 function Calibration({ stats }: { stats: ProposalStats }) {
   const cells: { label: string; value: string; note?: string }[] = [
     { label: "Total", value: String(stats.total), note: `${stats.drafted} still drafts` },
-    { label: "Submitted", value: String(stats.submitted) },
-    { label: "Won", value: String(stats.accepted), note: `${stats.rejected} declined` },
+    {
+      label: "Submitted",
+      value: String(stats.submitted),
+      note: `${stats.from_recommendation} from our picks`,
+    },
+    {
+      label: "Selected",
+      value: String(stats.accepted),
+      note: `${stats.rejected} not selected`,
+    },
     {
       label: "Avg score sent",
       value: stats.avg_score_submitted?.toFixed(1) ?? "—",

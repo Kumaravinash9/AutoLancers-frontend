@@ -276,6 +276,11 @@ export const admin = {
 export interface ProposalRow {
   id: string;
   recommendation_id: string | null;
+  user_id: string;
+  user_email: string;
+  freelancer_name: string;
+  /** True when we recommended it; false when the bid was placed independently. */
+  was_recommended: boolean;
   project_title: string;
   project_url: string;
   platform: string;
@@ -306,6 +311,8 @@ export interface ProposalStats {
   avg_score_submitted: number | null;
   avg_score_accepted: number | null;
   total_output_tokens: number;
+  from_recommendation: number;
+  self_directed: number;
 }
 
 export const proposals = {
