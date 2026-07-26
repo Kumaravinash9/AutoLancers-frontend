@@ -271,3 +271,45 @@ export const admin = {
       body: JSON.stringify({ role }),
     }),
 };
+
+
+export interface ProposalRow {
+  id: string;
+  recommendation_id: string | null;
+  project_title: string;
+  project_url: string;
+  platform: string;
+  external_id: string | null;
+  score: number | null;
+  reasons: ScoreReason[];
+  proposal_text: string | null;
+  bid_amount: number | null;
+  estimated_days: number | null;
+  currency: string | null;
+  status: "DRAFT" | "SUBMITTED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+  submitted_via: string | null;
+  external_bid_id: string | null;
+  submitted_at: string | null;
+  drafted_at: string | null;
+  created_at: string;
+  model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+}
+
+export interface ProposalStats {
+  total: number;
+  drafted: number;
+  submitted: number;
+  accepted: number;
+  rejected: number;
+  avg_score_submitted: number | null;
+  avg_score_accepted: number | null;
+  total_output_tokens: number;
+}
+
+export const proposals = {
+  list: (status?: ProposalRow["status"]) =>
+    request<ProposalRow[]>(`/proposals${status ? `?status=${status}` : ""}`),
+  stats: () => request<ProposalStats>("/proposals/stats"),
+};
