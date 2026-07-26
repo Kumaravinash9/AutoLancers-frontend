@@ -20,6 +20,7 @@ const STATUS_LABEL: Record<ProposalRow["status"], string> = {
   SUBMITTED: "Sent",
   ACCEPTED: "Selected",
   REJECTED: "Not selected",
+  // Reachable only once outcome syncing exists; today a sent bid stays "Sent".
   WITHDRAWN: "Withdrawn",
 };
 
@@ -68,6 +69,14 @@ export default function ProposalsPage() {
           Everything drafted or bid on, with the score that recommended it.
         </p>
       </div>
+
+      {stats && !stats.outcome_tracking_enabled && stats.awaiting_outcome > 0 && (
+        <ErrorNote>
+          {stats.awaiting_outcome} sent {stats.awaiting_outcome === 1 ? "bid has" : "bids have"} no
+          recorded outcome. Nothing syncs award status back from Freelancer yet, so a result here
+          means we asked and were told — not that you lost the work.
+        </ErrorNote>
+      )}
 
       {stats && <Calibration stats={stats} />}
 
@@ -160,15 +169,17 @@ function Calibration({ stats }: { stats: ProposalStats }) {
     },
     {
       label: "Selected",
-      value: String(stats.accepted),
-      note: `${stats.rejected} not selected`,
+      value: stats.outcome_tracking_enabled ? String(stats.accepted) : "—",
+      note: stats.outcome_tracking_enabled
+        ? `${stats.rejected} not selected`
+        : "outcomes not synced yet",
     },
     {
       label: "Avg score sent",
       value: stats.avg_score_submitted?.toFixed(1) ?? "—",
       note: stats.avg_score_accepted
         ? `${stats.avg_score_accepted.toFixed(1)} on won work`
-        : "no wins recorded yet",
+        : "needs outcomes to compare against",
     },
   ];
 

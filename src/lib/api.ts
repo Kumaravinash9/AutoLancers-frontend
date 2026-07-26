@@ -313,6 +313,9 @@ export interface ProposalStats {
   total_output_tokens: number;
   from_recommendation: number;
   self_directed: number;
+  /** False until award status is synced back from the marketplace. */
+  outcome_tracking_enabled: boolean;
+  awaiting_outcome: number;
 }
 
 export const proposals = {
