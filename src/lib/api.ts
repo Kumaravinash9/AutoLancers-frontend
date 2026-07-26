@@ -78,6 +78,12 @@ export interface Profile {
   weight_competition: number;
   weight_recency: number;
   proposal_notes: string;
+  /** When the board was last recalculated against the marketplace. */
+  last_synced_at: string | null;
+  /** When the profile itself was last edited. */
+  updated_at: string;
+  /** Computed server-side — a wrong client clock shouldn't decide this. */
+  sync_is_stale: boolean;
 }
 
 export interface AuthStatus {

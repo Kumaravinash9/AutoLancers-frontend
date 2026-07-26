@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button, Card, Empty, ErrorNote, Field, Page, inputClass } from "@/components/ui";
-import { api, Profile } from "@/lib/api";
+import { api, formatAge, Profile } from "@/lib/api";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -74,6 +74,7 @@ export default function ProfilePage() {
           This drives both scoring and the proposal drafts. Expect to tune it for the first week —
           the queue is only as good as what&apos;s here.
         </p>
+        <SyncStatus profile={profile} />
       </div>
 
       {error && <ErrorNote>{error}</ErrorNote>}
@@ -196,6 +197,34 @@ export default function ProfilePage() {
         </Button>
       </div>
     </Page>
+  );
+}
+
+/**
+ * When this profile last had the marketplace re-read against it.
+ *
+ * Marketplace profiles drift — rates change, skills get added, a listing's requirements move —
+ * so a score is only as current as the sync it was computed from. Showing the age of that sync
+ * is what stops a confident-looking number from quietly being stale.
+ */
+function SyncStatus({ profile }: { profile: Profile }) {
+  const synced = profile.last_synced_at;
+  // Staleness is decided by the server: reading the clock here would make the component
+  // non-deterministic, and a skewed client clock shouldn't flag good data as old.
+  const stale = profile.sync_is_stale;
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs">
+      <span className={stale ? "text-warn" : "text-muted"}>
+        {synced ? `Board synced ${formatAge(synced)}` : "Never synced"}
+      </span>
+      <span className="text-muted">Profile edited {formatAge(profile.updated_at)}</span>
+      {stale && (
+        <span className="text-warn">
+          — scores may be out of date. Run a fetch from the queue.
+        </span>
+      )}
+    </div>
   );
 }
 
