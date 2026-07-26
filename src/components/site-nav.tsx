@@ -13,16 +13,9 @@ import { APP_NAV, AUTH_LINKS, BRAND, MARKETING_NAV, MARKETING_ROUTES } from "@/c
  *
  * A stranger on the marketing page shouldn't be offered Queue and Profile — those mean nothing
  * until they have an account. Once inside the product, the pitch is no longer the point.
+ *
+ * The link lists live in `@/content/site` so the marketing header and this nav can't drift apart.
  */
-const APP_NAV = [
-  { href: "/queue", label: "Queue" },
-  { href: "/proposals", label: "Proposals" },
-  { href: "/profile", label: "Profile" },
-  { href: "/settings", label: "Settings" },
-];
-
-const MARKETING_ROUTES = new Set(["/", "/login"]);
-
 export function SiteNav() {
   const pathname = usePathname();
   const router = useRouter();

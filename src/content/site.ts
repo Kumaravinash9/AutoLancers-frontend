@@ -9,6 +9,7 @@ export const AUTH_LINKS = {
 
 export const APP_NAV = [
   { href: "/queue", label: "Queue" },
+  { href: "/proposals", label: "Proposals" },
   { href: "/profile", label: "Profile" },
   { href: "/settings", label: "Settings" },
 ];

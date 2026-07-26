@@ -105,7 +105,7 @@ export const QUEUE_DEMO = {
   reasons: [
     { label: "Skill match", detail: "Next.js, TypeScript, and Postgres all listed", points: 42 },
     { label: "Budget", detail: "1200–2500 USD clears your 900 floor", points: 24 },
-    { label: "Competition", detail: "Only 6 bids in, well under your cap", points: 14 },
+    { label: "Competition", detail: "Only 6 bids in — you are early to this one", points: 14 },
     { label: "Recency", detail: "Posted 2 hours ago", points: 6 },
   ] satisfies ScoreReason[],
   proposal:
@@ -178,7 +178,7 @@ export const REJECTED = {
     },
     {
       title: "WordPress plugin fix, urgent",
-      reason: "23 bids already — over your cap of 15",
+      reason: "Scored 46 — below your minimum of 55",
     },
     {
       title: "Full-stack app, no-code preferred",
