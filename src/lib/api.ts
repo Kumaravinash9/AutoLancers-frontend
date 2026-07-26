@@ -160,6 +160,9 @@ export const api = {
   patchJob: (id: string, patch: { proposal_text?: string; status?: JobStatus }) =>
     request<Job>(`/jobs/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 
+  /** Generate a proposal now instead of waiting for the poller to reach this job. */
+  draft: (id: string) => request<Job>(`/jobs/${id}/draft`, { method: "POST" }),
+
   rescore: () => request<{ rescored: number }>("/jobs/rescore", { method: "POST" }),
 
   getProfile: () => request<Profile>("/profile"),
@@ -390,7 +393,22 @@ export interface ProfileDetail extends ProfileCard {
   updated_at: string;
 }
 
+export interface FullSync {
+  board_fetched: number;
+  board_new: number;
+  board_changed: number;
+  board_drafted: number;
+  board_error: string | null;
+  bids_fetched: number;
+  bids_imported: number;
+  outcomes_updated: number;
+  bids_error: string | null;
+  last_synced_at: string | null;
+  bids_synced_at: string | null;
+}
+
 export const profiles = {
+  sync: (id: string) => request<FullSync>(`/profiles/${id}/sync`, { method: "POST" }),
   list: () => request<ProfileCard[]>("/profiles"),
   get: (id: string) => request<ProfileDetail>(`/profiles/${id}`),
 };

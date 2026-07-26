@@ -105,3 +105,14 @@ export function ErrorNote({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+
+/** Which marketplace a posting came from. Meaningless with one platform; essential with two. */
+export function PlatformTag({ platform }: { platform: string }) {
+  const label = platform === "freelancer" ? "Freelancer.com" : platform;
+  return (
+    <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-muted">
+      {label}
+    </span>
+  );
+}

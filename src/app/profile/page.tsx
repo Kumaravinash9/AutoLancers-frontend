@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Card, Empty, ErrorNote, Page } from "@/components/ui";
-import { api, formatAge, ProfileCard, profiles, proposals } from "@/lib/api";
+import { formatAge, ProfileCard, profiles } from "@/lib/api";
 import { Button } from "@/components/ui";
 
 /**
@@ -62,29 +62,28 @@ export default function ProfilesPage() {
 }
 
 function ProfileTile({ card }: { card: ProfileCard }) {
-  const [syncing, setSyncing] = useState<null | "board" | "bids">(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [result, setResult] = useState<string[] | null>(null);
 
-  async function sync(kind: "board" | "bids") {
-    setSyncing(kind);
+  async function sync() {
+    setSyncing(true);
     setResult(null);
     try {
-      if (kind === "board") {
-        const r = await api.runPipeline();
-        setResult(
-          r.error ?? `${r.fetched} fetched · ${r.new} new · ${r.drafted} drafted`,
-        );
-      } else {
-        const r = await proposals.sync();
-        setResult(
-          r.error ??
-            `${r.fetched} bids · ${r.imported} imported · ${r.outcomes_updated} outcomes`,
-        );
-      }
+      const r = await profiles.sync(card.id);
+      // Reported separately: the two halves fail for different reasons, and one line saying
+      // "synced" would hide a bid pull that quietly did nothing.
+      setResult([
+        r.board_error
+          ? `Jobs: ${r.board_error}`
+          : `Jobs: ${r.board_fetched} seen · ${r.board_new} new · ${r.board_changed} changed`,
+        r.bids_error
+          ? `Bids: ${r.bids_error}`
+          : `Bids: ${r.bids_fetched} found · ${r.outcomes_updated} outcomes updated`,
+      ]);
     } catch (err) {
-      setResult(err instanceof Error ? err.message : "Sync failed");
+      setResult([err instanceof Error ? err.message : "Sync failed"]);
     } finally {
-      setSyncing(null);
+      setSyncing(false);
     }
   }
 
@@ -149,16 +148,17 @@ function ProfileTile({ card }: { card: ProfileCard }) {
           </div>
         </dl>
 
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => sync("board")} disabled={syncing !== null}>
-            {syncing === "board" ? "Fetching…" : "Fetch jobs"}
-          </Button>
-          <Button onClick={() => sync("bids")} disabled={syncing !== null}>
-            {syncing === "bids" ? "Syncing…" : "Sync my bids"}
-          </Button>
-        </div>
+        <Button variant="primary" onClick={sync} disabled={syncing}>
+          {syncing ? "Syncing…" : "Sync now"}
+        </Button>
 
-        {result && <p className="font-mono text-[0.7rem] text-muted">{result}</p>}
+        {result && (
+          <ul className="space-y-0.5 font-mono text-[0.7rem] text-muted">
+            {result.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
       </div>
     </Card>
   );

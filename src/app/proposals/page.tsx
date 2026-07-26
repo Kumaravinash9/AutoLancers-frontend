@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Card, Empty, ErrorNote, Page, ScoreBadge } from "@/components/ui";
+import { Card, Empty, ErrorNote, Page, PlatformTag, ScoreBadge } from "@/components/ui";
 import { formatAge, proposals, ProposalRow, ProposalStats } from "@/lib/api";
 
 const STATUS_TONE: Record<ProposalRow["status"], string> = {
@@ -127,6 +127,7 @@ export default function ProposalsPage() {
                   </div>
 
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-muted">
+                    <PlatformTag platform={row.platform} />
                     <span>{row.freelancer_name}</span>
                     {row.bid_amount !== null && (
                       <span>

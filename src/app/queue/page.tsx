@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, Page, ScoreBadge, StatusChip } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Empty,
+  ErrorNote,
+  Page,
+  PlatformTag,
+  ScoreBadge,
+  StatusChip,
+} from "@/components/ui";
 import { api, formatAge, formatBudget, Job } from "@/lib/api";
 
 type Tab = "review" | "matched" | "rejected";
@@ -155,6 +164,7 @@ function JobRow({ job, showRejection }: { job: Job; showRejection: boolean }) {
           </Link>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <PlatformTag platform={job.platform} />
             <span>{formatBudget(job)}</span>
             <span>{job.bid_count ?? "?"} bids</span>
             <span>{formatAge(job.posted_at)}</span>
