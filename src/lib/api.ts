@@ -332,15 +332,20 @@ export interface SyncReport {
 
 export const proposals = {
   sync: () => request<SyncReport>("/proposals/sync", { method: "POST" }),
-  list: (status?: ProposalRow["status"]) =>
-    request<ProposalRow[]>(`/proposals${status ? `?status=${status}` : ""}`),
-  stats: () => request<ProposalStats>("/proposals/stats"),
+  list: (connectionId?: string | null) =>
+    request<ProposalRow[]>(`/proposals${connectionId ? `?connection_id=${connectionId}` : ""}`),
+  stats: (connectionId?: string | null) =>
+    request<ProposalStats>(
+      `/proposals/stats${connectionId ? `?connection_id=${connectionId}` : ""}`,
+    ),
 };
 
 
 export interface Connection {
   id: string;
   platform: string;
+  proposals: number;
+  wins: number;
   platform_username: string | null;
   scope: string | null;
   rating: number | null;

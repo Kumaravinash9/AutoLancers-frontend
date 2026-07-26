@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Card, Empty, ErrorNote, Page, PlatformTag, ScoreBadge } from "@/components/ui";
+import { useAccountScope } from "@/components/account-scope";
 import { formatAge, proposals, ProposalRow, ProposalStats } from "@/lib/api";
 
 const STATUS_TONE: Record<ProposalRow["status"], string> = {
@@ -37,12 +38,17 @@ export default function ProposalsPage() {
   const [stats, setStats] = useState<ProposalStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { accountId, accounts, ready } = useAccountScope();
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     void (async () => {
       try {
-        const [list, s] = await Promise.all([proposals.list(), proposals.stats()]);
+        const [list, s] = await Promise.all([
+          proposals.list(accountId),
+          proposals.stats(accountId),
+        ]);
         if (!cancelled) {
           setRows(list);
           setStats(s);
@@ -56,7 +62,7 @@ export default function ProposalsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [accountId, ready]);
 
   if (loading) return <Page><Empty>Loading…</Empty></Page>;
   if (error) return <Page><ErrorNote>{error}</ErrorNote></Page>;
@@ -68,6 +74,16 @@ export default function ProposalsPage() {
         <p className="mt-1 text-sm text-muted">
           Everything drafted or bid on, with the score that recommended it.
         </p>
+        {accounts.length > 1 && (
+          <p className="mt-1 font-mono text-xs text-muted">
+            {accountId
+              ? `Showing ${accounts.find((a) => a.id === accountId)?.platform_username} · others: ${accounts
+                  .filter((a) => a.id !== accountId)
+                  .map((a) => a.platform_username)
+                  .join(", ")}`
+              : `Showing all ${accounts.length} accounts combined`}
+          </p>
+        )}
       </div>
 
       {stats && !stats.outcome_tracking_enabled && stats.awaiting_outcome > 0 && (

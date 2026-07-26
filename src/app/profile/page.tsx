@@ -22,7 +22,8 @@ import { Button } from "@/components/ui";
  * split in two: rendering a name shouldn't ship a portfolio.
  */
 export default function ProfilesPage() {
-  const [cards, setCards] = useState<ProfileCard[]>([]);
+  const [profile, setProfile] = useState<ProfileCard | null>(null);
+  const [accounts, setAccounts] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,8 +31,11 @@ export default function ProfilesPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const list = await profiles.list();
-        if (!cancelled) setCards(list);
+        const [list, conns] = await Promise.all([profiles.list(), connectionsApi.list()]);
+        if (!cancelled) {
+          setProfile(list[0] ?? null);
+          setAccounts(conns);
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not load profiles");
       } finally {
@@ -49,27 +53,46 @@ export default function ProfilesPage() {
   return (
     <Page className="space-y-6">
       <div>
-        <h1 className="font-display text-xl font-semibold tracking-tight">Profiles</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight">Accounts</h1>
         <p className="mt-1 text-sm text-muted">
-          Open one to see its skills, rates and connected marketplaces.
+          {accounts.length === 0
+            ? "Connect a marketplace to start seeing work."
+            : `${accounts.length} connected · all scored by ${profile?.display_name ?? "your profile"}.`}
         </p>
       </div>
 
-      {cards.length === 0 ? (
-        <Empty>No profiles yet.</Empty>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((card) => (
-            <ProfileTile key={card.id} card={card} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {profile &&
+          accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              account={account}
+              profile={profile}
+              onRemoved={(id) => setAccounts((prev) => prev.filter((a) => a.id !== id))}
+            />
           ))}
-        </div>
-      )}
+        <ConnectCard />
+      </div>
     </Page>
   );
 }
 
-function ProfileTile({ card }: { card: ProfileCard }) {
-  const [accounts, setAccounts] = useState<Connection[]>([]);
+/**
+ * One card per connected marketplace account.
+ *
+ * A single card listing several accounts inside it read as one thing with a footnote. They are
+ * separate accounts with separate results, so they get separate cards — and the shared profile
+ * line on each says plainly that the skills and scoring rules are common to all of them.
+ */
+function AccountCard({
+  account,
+  profile,
+  onRemoved,
+}: {
+  account: Connection;
+  profile: ProfileCard;
+  onRemoved: (id: string) => void;
+}) {
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<string[] | null>(null);
 
@@ -77,9 +100,7 @@ function ProfileTile({ card }: { card: ProfileCard }) {
     setSyncing(true);
     setResult(null);
     try {
-      const r = await profiles.sync(card.id);
-      // Reported separately: the two halves fail for different reasons, and one line saying
-      // "synced" would hide a bid pull that quietly did nothing.
+      const r = await profiles.sync(profile.id);
       setResult([
         r.board_error
           ? `Jobs: ${r.board_error}`
@@ -95,29 +116,13 @@ function ProfileTile({ card }: { card: ProfileCard }) {
     }
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const list = await connectionsApi.list();
-        if (!cancelled) setAccounts(list);
-      } catch {
-        if (!cancelled) setAccounts([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function disconnect(id: string, name: string) {
-    // Removing a credential is easy to do by accident and tedious to undo — it means
-    // re-authorising on the marketplace.
-    if (!window.confirm(`Disconnect ${name}? Your bid history is kept; you'd need to reconnect.`))
+  async function disconnect() {
+    const name = account.platform_username ?? account.platform;
+    if (!window.confirm(`Disconnect ${name}? Its bid history is kept; you'd need to reconnect.`))
       return;
     try {
-      await connectionsApi.remove(id);
-      setAccounts((prev) => prev.filter((a) => a.id !== id));
+      await connectionsApi.remove(account.id);
+      onRemoved(account.id);
     } catch (err) {
       setResult([err instanceof Error ? err.message : "Could not disconnect"]);
     }
@@ -125,111 +130,175 @@ function ProfileTile({ card }: { card: ProfileCard }) {
 
   return (
     <Card className="flex h-full flex-col gap-4">
-      <div className="group flex items-start gap-3">
-        <Avatar image={card.profile_image} initials={card.initials} />
-        <div className="min-w-0">
-          <Link
-            href={`/profile/${card.id}`}
-            className="block truncate font-display font-semibold tracking-tight hover:text-accent"
-          >
-            {card.display_name}
-          </Link>
-          <p className="mt-0.5 line-clamp-2 text-sm text-muted">
-            {card.headline || "No headline set"}
+      <div className="flex items-start gap-3">
+        <Avatar
+          image={account.avatar_url}
+          initials={(account.platform_username ?? account.platform).slice(0, 2).toUpperCase()}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display font-semibold tracking-tight">
+            {account.platform_username ?? "unnamed account"}
+          </p>
+          <p className="mt-0.5 font-mono text-xs text-muted">
+            {account.platform}
+            {account.rating ? ` · ${account.rating}★ (${account.total_reviews ?? 0})` : ""}
           </p>
         </div>
+        <span
+          className={`rounded px-1.5 py-0.5 font-mono text-[0.65rem] ${
+            account.status === "ACTIVE" ? "bg-good/15 text-good" : "bg-warn/15 text-warn"
+          }`}
+        >
+          {account.status.toLowerCase()}
+        </span>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {card.skills.slice(0, 5).map((skill) => (
-          <SkillTag key={skill}>{skill}</SkillTag>
-        ))}
-        {card.skill_count > 5 && (
-          <span className="rounded-full px-2 py-0.5 font-mono text-[0.7rem] text-muted">
-            +{card.skill_count - 5}
-          </span>
-        )}
-      </div>
-
-      <dl className="mt-auto grid grid-cols-3 gap-2 border-t border-border pt-3 text-center">
-        {[
-          ["Matches", card.recommendations],
-          ["Bids", card.proposals],
-          ["Won", card.wins],
-        ].map(([label, value]) => (
-          <div key={String(label)}>
-            <dt className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-muted">
-              {label}
-            </dt>
-            <dd className="font-display text-lg font-semibold tabular-nums">{value}</dd>
-          </div>
-        ))}
+      <dl className="grid grid-cols-2 gap-2 border-y border-border py-3 text-center">
+        <div>
+          <dt className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-muted">Bids</dt>
+          <dd className="font-display text-lg font-semibold tabular-nums">{account.proposals}</dd>
+        </div>
+        <div>
+          <dt className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-muted">Won</dt>
+          <dd className="font-display text-lg font-semibold tabular-nums">{account.wins}</dd>
+        </div>
       </dl>
 
-      {/* Two syncs, named for what they fetch. Collapsing them into one button would hide that
-          one reads the marketplace for new work and the other reads back your own results. */}
-      <div className="space-y-2 border-t border-border pt-3">
-        <dl className="grid gap-1 font-mono text-[0.7rem] text-muted">
-          <div className="flex justify-between gap-2">
-            <dt>Board</dt>
-            <dd>{card.last_synced_at ? formatAge(card.last_synced_at) : "never"}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt>Your bids</dt>
-            <dd>{card.bids_synced_at ? formatAge(card.bids_synced_at) : "never synced"}</dd>
-          </div>
-        </dl>
-
-        <div className="space-y-1.5">
-          <p className="font-mono text-[0.7rem] uppercase tracking-[0.1em] text-muted">
-            Accounts
-          </p>
-          {accounts.length === 0 ? (
-            <p className="text-xs text-muted">None connected.</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {accounts.map((a) => (
-                <li key={a.id} className="flex items-center gap-2">
-                  <Avatar
-                    image={a.avatar_url}
-                    initials={(a.platform_username ?? a.platform).slice(0, 2).toUpperCase()}
-                    size="h-6 w-6 text-[0.6rem]"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-xs">
-                    {a.platform_username ?? a.platform}
-                    <span className="text-muted"> · {a.platform}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => disconnect(a.id, a.platform_username ?? a.platform)}
-                    className="rounded px-1.5 py-0.5 font-mono text-[0.65rem] text-muted transition-colors hover:text-accent"
-                  >
-                    remove
-                  </button>
-                </li>
-              ))}
-            </ul>
+      {/* Scoring is per profile, not per account. Saying so here stops the shared skills from
+          looking like they belong to this account alone. */}
+      <div className="space-y-1.5">
+        <Link
+          href={`/profile/${profile.id}`}
+          className="font-mono text-[0.7rem] text-muted hover:text-accent"
+        >
+          Scored by {profile.display_name} →
+        </Link>
+        <div className="flex flex-wrap gap-1.5">
+          {profile.skills.slice(0, 4).map((skill) => (
+            <SkillTag key={skill}>{skill}</SkillTag>
+          ))}
+          {profile.skill_count > 4 && (
+            <span className="rounded-full px-2 py-0.5 font-mono text-[0.7rem] text-muted">
+              +{profile.skill_count - 4}
+            </span>
           )}
-          <a
-            href={`${API_URL}/auth/freelancer/login`}
-            className="inline-block font-mono text-[0.7rem] text-accent hover:underline"
-          >
-            + connect another account
-          </a>
         </div>
+      </div>
 
+      <dl className="mt-auto grid gap-1 font-mono text-[0.7rem] text-muted">
+        <div className="flex justify-between gap-2">
+          <dt>Board</dt>
+          <dd>{profile.last_synced_at ? formatAge(profile.last_synced_at) : "never"}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt>Your bids</dt>
+          <dd>{account.last_synced_at ? formatAge(account.last_synced_at) : "never synced"}</dd>
+        </div>
+      </dl>
+
+      <div className="flex flex-wrap gap-2">
         <Button variant="primary" onClick={sync} disabled={syncing}>
           {syncing ? "Syncing…" : "Sync now"}
         </Button>
-
-        {result && (
-          <ul className="space-y-0.5 font-mono text-[0.7rem] text-muted">
-            {result.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        )}
+        <Button variant="ghost" onClick={disconnect}>
+          Disconnect
+        </Button>
       </div>
+
+      {result && (
+        <ul className="space-y-0.5 font-mono text-[0.7rem] text-muted">
+          {result.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Marketplaces you can attach an account from.
+ *
+ * Only Freelancer.com is connectable, and the others say why rather than sitting greyed out with
+ * no explanation. Upwork's restriction is a policy one, not a missing feature — its automation
+ * rules prohibit watcher tools even with approved API access, so it is not a matter of waiting.
+ */
+const PLATFORMS = [
+  {
+    id: "freelancer",
+    name: "Freelancer.com",
+    detail: "Full access: reads the board, tracks your bids and their outcomes.",
+    href: `${API_URL}/auth/freelancer/login`,
+  },
+  {
+    id: "upwork",
+    name: "Upwork",
+    detail: "Not supported. Upwork's automation policy prohibits tools that watch the job feed.",
+    href: null,
+  },
+  {
+    id: "fiverr",
+    name: "Fiverr",
+    detail: "No public API for seller-side work. Nothing to connect to yet.",
+    href: null,
+  },
+] as const;
+
+function ConnectCard() {
+  const [picking, setPicking] = useState(false);
+
+  if (!picking) {
+    return (
+      <button
+        type="button"
+        onClick={() => setPicking(true)}
+        className="grid min-h-[16rem] place-items-center rounded-lg border border-dashed border-border p-6 text-center transition-colors hover:border-accent hover:bg-accent-soft"
+      >
+        <span>
+          <span className="block font-display font-semibold">Connect an account</span>
+          <span className="mt-1 block text-sm text-muted">
+            Add another marketplace account, scored by the same profile.
+          </span>
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <Card className="flex min-h-[16rem] flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-display font-semibold tracking-tight">Choose a marketplace</p>
+          <p className="mt-0.5 text-sm text-muted">You&apos;ll sign in there and come back.</p>
+        </div>
+        <Button variant="ghost" onClick={() => setPicking(false)}>
+          Cancel
+        </Button>
+      </div>
+
+      <ul className="space-y-2">
+        {PLATFORMS.map((platform) =>
+          platform.href ? (
+            <li key={platform.id}>
+              <a
+                href={platform.href}
+                className="block rounded-md border border-border px-3 py-2 transition-colors hover:border-accent hover:bg-accent-soft"
+              >
+                <span className="block text-sm font-medium">{platform.name}</span>
+                <span className="mt-0.5 block text-xs text-muted">{platform.detail}</span>
+              </a>
+            </li>
+          ) : (
+            <li
+              key={platform.id}
+              className="rounded-md border border-border px-3 py-2 opacity-60"
+            >
+              <span className="block text-sm font-medium">{platform.name}</span>
+              <span className="mt-0.5 block text-xs text-muted">{platform.detail}</span>
+            </li>
+          )
+        )}
+      </ul>
     </Card>
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AccountSwitcher } from "@/components/account-scope";
 import { Account, accounts } from "@/lib/api";
 
 /**
@@ -96,6 +97,7 @@ export function SiteNav() {
               </Link>
             )}
             <div className="ml-auto flex items-center gap-3 text-sm">
+              <AccountSwitcher />
               {account && <span className="hidden text-muted sm:inline">{account.email}</span>}
               <button
                 type="button"
