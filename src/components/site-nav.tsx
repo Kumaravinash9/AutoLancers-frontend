@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AccountSwitcher } from "@/components/account-scope";
 import { Account, accounts } from "@/lib/api";
 import { APP_NAV, AUTH_LINKS, BRAND, MARKETING_NAV, MARKETING_ROUTES } from "@/content/site";
 
@@ -13,6 +14,14 @@ import { APP_NAV, AUTH_LINKS, BRAND, MARKETING_NAV, MARKETING_ROUTES } from "@/c
  * A stranger on the marketing page shouldn't be offered Queue and Profile — those mean nothing
  * until they have an account. Once inside the product, the pitch is no longer the point.
  */
+const APP_NAV = [
+  { href: "/queue", label: "Queue" },
+  { href: "/proposals", label: "Proposals" },
+  { href: "/profile", label: "Profile" },
+  { href: "/settings", label: "Settings" },
+];
+
+const MARKETING_ROUTES = new Set(["/", "/login"]);
 
 export function SiteNav() {
   const pathname = usePathname();
@@ -34,7 +43,9 @@ export function SiteNav() {
       state.cancelled = true;
     };
   }, [pathname]);
-  const marketing = MARKETING_ROUTES.has(pathname);
+  // Only pitch to people who aren't already signed in. Showing "Sign in" to someone with a live
+  // session reads as being logged out, which is alarming on a tool holding your credentials.
+  const marketing = MARKETING_ROUTES.has(pathname) && account === null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-surface/80 backdrop-blur-md supports-backdrop-filter:bg-surface/60">
@@ -102,6 +113,7 @@ export function SiteNav() {
               </Link>
             )}
             <div className="ml-auto flex items-center gap-3 text-sm">
+              <AccountSwitcher />
               {account && <span className="hidden text-muted sm:inline">{account.email}</span>}
               <button
                 type="button"

@@ -8,7 +8,9 @@
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010";
 
-export type JobStatus = "new" | "drafted" | "approved" | "dismissed" | "submitted";
+// Mirrors RecommendationStatus in the backend. A job is DISMISSED when you pass on it;
+// APPLIED once a proposal has gone out.
+export type JobStatus = "NEW" | "VIEWED" | "APPLIED" | "DISMISSED";
 
 export interface BidAvailability {
   available: boolean;
@@ -28,9 +30,10 @@ export interface ScoreReason {
 }
 
 export interface Job {
-  id: number;
+  /** The recommendation's UUID. */
+  id: string;
   platform: string;
-  external_id: string;
+  external_id: string | null;
   title: string;
   description: string;
   url: string;
@@ -66,15 +69,22 @@ export interface Profile {
   keywords_include: string[];
   keywords_exclude: string[];
   fixed_project_min: number;
-  hourly_min: number;
+  rate_min: number;
   currency: string;
-  max_existing_bids: number;
+  /** Bid count at which competition scores half marks. Not a cap — nothing is hidden for being busy. */
+  crowded_at_bids: number;
   min_match_score: number;
   weight_skills: number;
   weight_budget: number;
   weight_competition: number;
   weight_recency: number;
   proposal_notes: string;
+  /** When the board was last recalculated against the marketplace. */
+  last_synced_at: string | null;
+  /** When the profile itself was last edited. */
+  updated_at: string;
+  /** Computed server-side — a wrong client clock shouldn't decide this. */
+  sync_is_stale: boolean;
 }
 
 export interface AuthStatus {
@@ -146,10 +156,13 @@ export const api = {
     return request<Job[]>(`/jobs?${query}`);
   },
 
-  getJob: (id: number) => request<Job>(`/jobs/${id}`),
+  getJob: (id: string) => request<Job>(`/jobs/${id}`),
 
-  patchJob: (id: number, patch: { proposal_text?: string; status?: JobStatus }) =>
+  patchJob: (id: string, patch: { proposal_text?: string; status?: JobStatus }) =>
     request<Job>(`/jobs/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+
+  /** Generate a proposal now instead of waiting for the poller to reach this job. */
+  draft: (id: string) => request<Job>(`/jobs/${id}/draft`, { method: "POST" }),
 
   rescore: () => request<{ rescored: number }>("/jobs/rescore", { method: "POST" }),
 
@@ -163,7 +176,7 @@ export const api = {
   bidAvailability: () => request<BidAvailability>("/jobs/bid-availability"),
 
   /** Places a real bid. `confirm` is required by the backend — there is no implicit submit. */
-  placeBid: (id: number, body: { amount: number; period_days: number; confirm: true }) =>
+  placeBid: (id: string, body: { amount: number; period_days: number; confirm: true }) =>
     request<BidResult>(`/jobs/${id}/bid`, { method: "POST", body: JSON.stringify(body) }),
 
   runPipeline: () => request<CycleReport>("/pipeline/run", { method: "POST" }),
@@ -261,4 +274,173 @@ export const admin = {
       method: "PATCH",
       body: JSON.stringify({ role }),
     }),
+};
+
+
+export interface ProposalRow {
+  id: string;
+  recommendation_id: string | null;
+  user_id: string;
+  user_email: string;
+  freelancer_name: string;
+  /** True when we recommended it; false when the bid was placed independently. */
+  was_recommended: boolean;
+  project_title: string;
+  project_url: string;
+  platform: string;
+  external_id: string | null;
+  score: number | null;
+  reasons: ScoreReason[];
+  proposal_text: string | null;
+  bid_amount: number | null;
+  estimated_days: number | null;
+  currency: string | null;
+  status: "DRAFT" | "SUBMITTED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+  submitted_via: string | null;
+  external_bid_id: string | null;
+  submitted_at: string | null;
+  drafted_at: string | null;
+  created_at: string;
+  model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+}
+
+export interface ProposalStats {
+  total: number;
+  drafted: number;
+  submitted: number;
+  accepted: number;
+  rejected: number;
+  avg_score_submitted: number | null;
+  avg_score_accepted: number | null;
+  total_output_tokens: number;
+  from_recommendation: number;
+  self_directed: number;
+  /** False until award status is synced back from the marketplace. */
+  outcome_tracking_enabled: boolean;
+  awaiting_outcome: number;
+}
+
+export interface SyncReport {
+  fetched: number;
+  linked: number;
+  imported: number;
+  projects_added: number;
+  outcomes_updated: number;
+  error: string | null;
+}
+
+export const proposals = {
+  sync: () => request<SyncReport>("/proposals/sync", { method: "POST" }),
+  list: (connectionId?: string | null) =>
+    request<ProposalRow[]>(`/proposals${connectionId ? `?connection_id=${connectionId}` : ""}`),
+  stats: (connectionId?: string | null) =>
+    request<ProposalStats>(
+      `/proposals/stats${connectionId ? `?connection_id=${connectionId}` : ""}`,
+    ),
+};
+
+
+export interface Connection {
+  id: string;
+  platform: string;
+  proposals: number;
+  wins: number;
+  platform_username: string | null;
+  scope: string | null;
+  rating: number | null;
+  total_reviews: number | null;
+  avatar_url: string | null;
+  status: string;
+  /** True for the account the app is scoped to; all false means every account. */
+  is_selected: boolean;
+  /** The account's own public profile on the marketplace, refreshed on every sync. */
+  display_name: string | null;
+  tagline: string | null;
+  summary: string | null;
+  account_skills: string[];
+  hourly_rate: number | null;
+  currency: string | null;
+  country: string | null;
+  portfolio_count: number | null;
+  member_since: string | null;
+  connected_at: string | null;
+  last_synced_at: string | null;
+}
+
+export interface ProfileCard {
+  id: string;
+  display_name: string;
+  headline: string;
+  profile_image: string | null;
+  initials: string;
+  skills: string[];
+  skill_count: number;
+  rate_min: number;
+  rate_max: number;
+  currency: string;
+  availability: string;
+  status: string;
+  platforms: string[];
+  last_synced_at: string | null;
+  bids_synced_at: string | null;
+  recommendations: number;
+  proposals: number;
+  wins: number;
+}
+
+export interface ProfileDetail extends ProfileCard {
+  bio: string;
+  weighted_skills: { name: string; weight: number }[];
+  portfolio: Record<string, unknown>[];
+  experience: Record<string, unknown>[];
+  education: Record<string, unknown>[];
+  keywords_include: string[];
+  keywords_exclude: string[];
+  fixed_project_min: number;
+  /** Bid count at which competition scores half marks. Not a cap — nothing is hidden for being busy. */
+  crowded_at_bids: number;
+  min_match_score: number;
+  weight_skills: number;
+  weight_budget: number;
+  weight_competition: number;
+  weight_recency: number;
+  proposal_notes: string;
+  connections: Connection[];
+  avg_score: number | null;
+  bids_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FullSync {
+  board_fetched: number;
+  board_new: number;
+  board_changed: number;
+  board_drafted: number;
+  board_error: string | null;
+  bids_fetched: number;
+  bids_imported: number;
+  outcomes_updated: number;
+  bids_error: string | null;
+  last_synced_at: string | null;
+  bids_synced_at: string | null;
+}
+
+export const connections = {
+  list: () => request<Connection[]>("/connections"),
+  remove: (id: string) => request<void>(`/connections/${id}`, { method: "DELETE" }),
+  /** Scope the app to one account, or to all of them with null. Returns the updated list. */
+  select: (id: string | null) =>
+    request<Connection[]>("/connections/selected", {
+      method: "PUT",
+      body: JSON.stringify({ connection_id: id }),
+    }),
+};
+
+export const profiles = {
+  sync: (id: string) => request<FullSync>(`/profiles/${id}/sync`, { method: "POST" }),
+  list: () => request<ProfileCard[]>("/profiles"),
+  get: (id: string) => request<ProfileDetail>(`/profiles/${id}`),
 };

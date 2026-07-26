@@ -1,228 +1,368 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, Field, Page, inputClass } from "@/components/ui";
-import { api, Profile } from "@/lib/api";
+import { useAccountScope } from "@/components/account-scope";
+import { Card, Empty, ErrorNote, Page } from "@/components/ui";
+import {
+  API_URL,
+  Connection,
+  connections as connectionsApi,
+  formatAge,
+  ProfileCard,
+  profiles,
+} from "@/lib/api";
+import { Button } from "@/components/ui";
 
-export default function ProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [skillsText, setSkillsText] = useState("");
+/**
+ * Profile browse view.
+ *
+ * A card carries only what identifies a profile — face, name, headline, a few skills. Everything
+ * that only matters once you've chosen one lives behind the click, which is also why the API is
+ * split in two: rendering a name shouldn't ship a portfolio.
+ */
+export default function ProfilesPage() {
+  const { accountId, select } = useAccountScope();
+  const [profile, setProfile] = useState<ProfileCard | null>(null);
+  const [accounts, setAccounts] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
-        const result = await api.getProfile();
-        setProfile(result);
-        setSkillsText(result.skills.map((s) => `${s.name}:${s.weight}`).join("\n"));
+        const [list, conns] = await Promise.all([profiles.list(), connectionsApi.list()]);
+        if (!cancelled) {
+          setProfile(list[0] ?? null);
+          setAccounts(conns);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load profile");
+        if (!cancelled) setError(err instanceof Error ? err.message : "Could not load profiles");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  function set<K extends keyof Profile>(key: K, value: Profile[K]) {
-    setProfile((p) => (p ? { ...p, [key]: value } : p));
-  }
-
-  async function save(thenRescore: boolean) {
-    if (!profile) return;
-    setSaving(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const skills = skillsText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [name, weight] = line.split(":");
-          return { name: name.trim(), weight: Number(weight ?? 1) || 1 };
-        })
-        .filter((s) => s.name);
-
-      const saved = await api.saveProfile({ ...profile, skills });
-      setProfile(saved);
-
-      if (thenRescore) {
-        const { rescored } = await api.rescore();
-        setNotice(`Saved, and re-scored ${rescored} stored job${rescored === 1 ? "" : "s"}.`);
-      } else {
-        setNotice("Saved. Stored jobs keep their old scores until you re-score.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   if (loading) return <Page><Empty>Loading…</Empty></Page>;
-  if (!profile) return <Page><ErrorNote>{error ?? "Could not load the profile."}</ErrorNote></Page>;
+  if (error) return <Page><ErrorNote>{error}</ErrorNote></Page>;
 
   return (
-    <Page className="space-y-5">
+    <Page className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Profile</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight">Accounts</h1>
         <p className="mt-1 text-sm text-muted">
-          This drives both scoring and the proposal drafts. Expect to tune it for the first week —
-          the queue is only as good as what&apos;s here.
+          {accounts.length === 0
+            ? "Connect a marketplace to start seeing work."
+            : `${accounts.length} connected · all scored by ${profile?.display_name ?? "your profile"}. Open one for its bids and history.`}
         </p>
       </div>
 
-      {error && <ErrorNote>{error}</ErrorNote>}
-      {notice && <ErrorNote>{notice}</ErrorNote>}
-
-      <Card className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Identity</h2>
-        <Field label="Name or brand">
-          <input
-            className={inputClass}
-            value={profile.display_name}
-            onChange={(e) => set("display_name", e.target.value)}
-          />
-        </Field>
-        <Field label="Headline">
-          <input
-            className={inputClass}
-            value={profile.headline}
-            onChange={(e) => set("headline", e.target.value)}
-          />
-        </Field>
-        <Field
-          label="Proof points and standard offer"
-          hint="Injected into the draft as facts. Only put things here that are true and that a client could verify."
-        >
-          <textarea
-            className={`${inputClass} min-h-28`}
-            value={profile.proposal_notes}
-            onChange={(e) => set("proposal_notes", e.target.value)}
-          />
-        </Field>
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Matching</h2>
-        <Field label="Skills" hint="One per line, as name:weight — e.g. next.js:5">
-          <textarea
-            className={`${inputClass} min-h-40 font-mono text-xs`}
-            value={skillsText}
-            onChange={(e) => setSkillsText(e.target.value)}
-          />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Must include (comma separated)" hint="Leave empty to allow anything">
-            <input
-              className={inputClass}
-              value={profile.keywords_include.join(", ")}
-              onChange={(e) => set("keywords_include", splitList(e.target.value))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {profile &&
+          accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              account={account}
+              profile={profile}
+              selected={accountId === account.id}
+              onSelect={() => void select(accountId === account.id ? null : account.id)}
+              onRemoved={(id) => setAccounts((prev) => prev.filter((a) => a.id !== id))}
             />
-          </Field>
-          <Field label="Never show (comma separated)">
-            <input
-              className={inputClass}
-              value={profile.keywords_exclude.join(", ")}
-              onChange={(e) => set("keywords_exclude", splitList(e.target.value))}
-            />
-          </Field>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <NumberField
-            label="Fixed min"
-            value={profile.fixed_project_min}
-            onChange={(v) => set("fixed_project_min", v)}
-          />
-          <NumberField
-            label="Hourly min"
-            value={profile.hourly_min}
-            onChange={(v) => set("hourly_min", v)}
-          />
-          <NumberField
-            label="Max bids"
-            value={profile.max_existing_bids}
-            onChange={(v) => set("max_existing_bids", v)}
-          />
-          <NumberField
-            label="Min score"
-            value={profile.min_match_score}
-            onChange={(v) => set("min_match_score", v)}
-          />
-        </div>
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Score weights
-        </h2>
-        <p className="text-sm text-muted">
-          Relative, not percentages — they&apos;re normalised, so only the ratios matter.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <NumberField
-            label="Skills"
-            value={profile.weight_skills}
-            onChange={(v) => set("weight_skills", v)}
-          />
-          <NumberField
-            label="Budget"
-            value={profile.weight_budget}
-            onChange={(v) => set("weight_budget", v)}
-          />
-          <NumberField
-            label="Competition"
-            value={profile.weight_competition}
-            onChange={(v) => set("weight_competition", v)}
-          />
-          <NumberField
-            label="Recency"
-            value={profile.weight_recency}
-            onChange={(v) => set("weight_recency", v)}
-          />
-        </div>
-      </Card>
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant="primary" onClick={() => save(true)} disabled={saving}>
-          {saving ? "Saving…" : "Save and re-score"}
-        </Button>
-        <Button onClick={() => save(false)} disabled={saving}>
-          Save only
-        </Button>
+          ))}
+        <ConnectCard />
       </div>
     </Page>
   );
 }
 
-function NumberField({
-  label,
-  value,
-  onChange,
+/**
+ * One card per connected marketplace account.
+ *
+ * A single card listing several accounts inside it read as one thing with a footnote. They are
+ * separate accounts with separate results, so they get separate cards — and the shared profile
+ * line on each says plainly that the skills and scoring rules are common to all of them.
+ */
+function AccountCard({
+  account,
+  profile,
+  selected,
+  onSelect,
+  onRemoved,
 }: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
+  account: Connection;
+  profile: ProfileCard;
+  selected: boolean;
+  onSelect: () => void;
+  onRemoved: (id: string) => void;
 }) {
+  const [syncing, setSyncing] = useState(false);
+  const [result, setResult] = useState<string[] | null>(null);
+
+  async function sync() {
+    setSyncing(true);
+    setResult(null);
+    try {
+      const r = await profiles.sync(profile.id);
+      setResult([
+        r.board_error
+          ? `Jobs: ${r.board_error}`
+          : `Jobs: ${r.board_fetched} seen · ${r.board_new} new · ${r.board_changed} changed`,
+        r.bids_error
+          ? `Bids: ${r.bids_error}`
+          : `Bids: ${r.bids_fetched} found · ${r.outcomes_updated} outcomes updated`,
+      ]);
+    } catch (err) {
+      setResult([err instanceof Error ? err.message : "Sync failed"]);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function disconnect() {
+    const name = account.platform_username ?? account.platform;
+    if (!window.confirm(`Disconnect ${name}? Its bid history is kept; you'd need to reconnect.`))
+      return;
+    try {
+      await connectionsApi.remove(account.id);
+      onRemoved(account.id);
+    } catch (err) {
+      setResult([err instanceof Error ? err.message : "Could not disconnect"]);
+    }
+  }
+
   return (
-    <Field label={label}>
-      <input
-        type="number"
-        className={inputClass}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-    </Field>
+    <Card
+      className={`flex h-full flex-col gap-4 transition-colors ${
+        selected ? "border-accent" : ""
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <Avatar
+          image={account.avatar_url}
+          initials={(account.platform_username ?? account.platform).slice(0, 2).toUpperCase()}
+        />
+        <div className="min-w-0 flex-1">
+          <Link
+            href={`/profile/account/${account.id}`}
+            className="block truncate font-display font-semibold tracking-tight hover:text-accent"
+          >
+            {account.platform_username ?? "unnamed account"}
+          </Link>
+          <p className="mt-0.5 font-mono text-xs text-muted">
+            {account.platform}
+            {account.rating ? ` · ${account.rating}★ (${account.total_reviews ?? 0})` : ""}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={`rounded px-1.5 py-0.5 font-mono text-[0.65rem] ${
+              account.status === "ACTIVE" ? "bg-good/15 text-good" : "bg-warn/15 text-warn"
+            }`}
+          >
+            {account.status.toLowerCase()}
+          </span>
+          {/* Which account the rest of the app is filtered to. Without it, the navbar picker is
+              the only place that says, and it's easy to forget a filter is on. */}
+          {selected && (
+            <span className="rounded bg-accent px-1.5 py-0.5 font-mono text-[0.65rem] text-white">
+              selected
+            </span>
+          )}
+        </div>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-2 border-y border-border py-3 text-center">
+        <div>
+          <dt className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-muted">Bids</dt>
+          <dd className="font-display text-lg font-semibold tabular-nums">{account.proposals}</dd>
+        </div>
+        <div>
+          <dt className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-muted">Won</dt>
+          <dd className="font-display text-lg font-semibold tabular-nums">{account.wins}</dd>
+        </div>
+      </dl>
+
+      {/* The account's own skills as the marketplace lists them — what a client sees. Our
+          scoring profile is separate and linked from the detail page. */}
+      <div className="space-y-1.5">
+        <p className="font-mono text-[0.7rem] text-muted">
+          {account.tagline || `Scored by ${profile.display_name}`}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {account.account_skills.slice(0, 4).map((skill) => (
+            <SkillTag key={skill}>{skill}</SkillTag>
+          ))}
+          {account.account_skills.length > 4 && (
+            <span className="rounded-full px-2 py-0.5 font-mono text-[0.7rem] text-muted">
+              +{account.account_skills.length - 4}
+            </span>
+          )}
+          {account.account_skills.length === 0 && (
+            <span className="font-mono text-[0.7rem] text-muted">no skills listed yet</span>
+          )}
+        </div>
+      </div>
+
+      <dl className="mt-auto grid gap-1 font-mono text-[0.7rem] text-muted">
+        <div className="flex justify-between gap-2">
+          <dt>Board</dt>
+          <dd>{profile.last_synced_at ? formatAge(profile.last_synced_at) : "never"}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt>Your bids</dt>
+          <dd>{account.last_synced_at ? formatAge(account.last_synced_at) : "never synced"}</dd>
+        </div>
+      </dl>
+
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={`/profile/account/${account.id}`}
+          className="inline-flex items-center rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+        >
+          Open
+        </Link>
+        <Button onClick={sync} disabled={syncing}>
+          {syncing ? "Syncing…" : "Sync"}
+        </Button>
+        <Button variant="ghost" onClick={onSelect}>
+          {selected ? "Show all" : "Select"}
+        </Button>
+        <Button variant="ghost" onClick={disconnect}>
+          Disconnect
+        </Button>
+      </div>
+
+      {result && (
+        <ul className="space-y-0.5 font-mono text-[0.7rem] text-muted">
+          {result.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 
-function splitList(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+/**
+ * Marketplaces you can attach an account from.
+ *
+ * Only Freelancer.com is connectable, and the others say why rather than sitting greyed out with
+ * no explanation. Upwork's restriction is a policy one, not a missing feature — its automation
+ * rules prohibit watcher tools even with approved API access, so it is not a matter of waiting.
+ */
+const PLATFORMS = [
+  {
+    id: "freelancer",
+    name: "Freelancer.com",
+    detail: "Full access: reads the board, tracks your bids and their outcomes.",
+    href: `${API_URL}/auth/freelancer/login`,
+  },
+  {
+    id: "upwork",
+    name: "Upwork",
+    detail: "Not supported. Upwork's automation policy prohibits tools that watch the job feed.",
+    href: null,
+  },
+  {
+    id: "fiverr",
+    name: "Fiverr",
+    detail: "No public API for seller-side work. Nothing to connect to yet.",
+    href: null,
+  },
+] as const;
+
+function ConnectCard() {
+  const [picking, setPicking] = useState(false);
+
+  if (!picking) {
+    return (
+      <button
+        type="button"
+        onClick={() => setPicking(true)}
+        className="grid min-h-[16rem] place-items-center rounded-lg border border-dashed border-border p-6 text-center transition-colors hover:border-accent hover:bg-accent-soft"
+      >
+        <span>
+          <span className="block font-display font-semibold">Connect an account</span>
+          <span className="mt-1 block text-sm text-muted">
+            Add another marketplace account, scored by the same profile.
+          </span>
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <Card className="flex min-h-[16rem] flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-display font-semibold tracking-tight">Choose a marketplace</p>
+          <p className="mt-0.5 text-sm text-muted">You&apos;ll sign in there and come back.</p>
+        </div>
+        <Button variant="ghost" onClick={() => setPicking(false)}>
+          Cancel
+        </Button>
+      </div>
+
+      <ul className="space-y-2">
+        {PLATFORMS.map((platform) =>
+          platform.href ? (
+            <li key={platform.id}>
+              <a
+                href={platform.href}
+                className="block rounded-md border border-border px-3 py-2 transition-colors hover:border-accent hover:bg-accent-soft"
+              >
+                <span className="block text-sm font-medium">{platform.name}</span>
+                <span className="mt-0.5 block text-xs text-muted">{platform.detail}</span>
+              </a>
+            </li>
+          ) : (
+            <li
+              key={platform.id}
+              className="rounded-md border border-border px-3 py-2 opacity-60"
+            >
+              <span className="block text-sm font-medium">{platform.name}</span>
+              <span className="mt-0.5 block text-xs text-muted">{platform.detail}</span>
+            </li>
+          )
+        )}
+      </ul>
+    </Card>
+  );
+}
+
+export function Avatar({
+  image,
+  initials,
+  size = "h-12 w-12 text-sm",
+}: {
+  image: string | null;
+  initials: string;
+  size?: string;
+}) {
+  if (image) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={image} alt="" className={`${size} shrink-0 rounded-full object-cover`} />;
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className={`${size} grid shrink-0 place-items-center rounded-full bg-accent-soft font-display font-semibold text-accent`}
+    >
+      {initials}
+    </span>
+  );
+}
+
+export function SkillTag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs">
+      {children}
+    </span>
+  );
 }

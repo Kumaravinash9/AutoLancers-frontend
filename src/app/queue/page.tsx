@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, Page, ScoreBadge, StatusChip } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Empty,
+  ErrorNote,
+  Page,
+  PlatformTag,
+  ScoreBadge,
+  StatusChip,
+} from "@/components/ui";
 import { api, formatAge, formatBudget, Job } from "@/lib/api";
 
 type Tab = "review" | "matched" | "rejected";
@@ -27,7 +36,7 @@ export default function QueuePage() {
     // "Needs review" is the subset you haven't acted on yet — approved and dismissed jobs stay
     // visible under "All matched" but drop out of the working queue.
     return tab === "review"
-      ? results.filter((j) => j.status === "new" || j.status === "drafted")
+      ? results.filter((j) => j.status === "NEW" || j.status === "VIEWED")
       : results;
   }, [tab]);
 
@@ -155,6 +164,7 @@ function JobRow({ job, showRejection }: { job: Job; showRejection: boolean }) {
           </Link>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <PlatformTag platform={job.platform} />
             <span>{formatBudget(job)}</span>
             <span>{job.bid_count ?? "?"} bids</span>
             <span>{formatAge(job.posted_at)}</span>

@@ -4,25 +4,36 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Button, Card, Empty, ErrorNote, Page, ScoreBadge, StatusChip, inputClass } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Empty,
+  ErrorNote,
+  inputClass,
+  Page,
+  PlatformTag,
+  ScoreBadge,
+  StatusChip,
+} from "@/components/ui";
 import { api, BidAvailability, formatAge, formatBudget, Job, JobStatus } from "@/lib/api";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const jobId = Number(params.id);
+  const jobId = params.id;
 
   const [job, setJob] = useState<Job | null>(null);
   const [draft, setDraft] = useState("");
-  // A non-numeric id can never load, so don't start in a loading state for one.
-  const [loading, setLoading] = useState(() => !Number.isNaN(Number(params.id)));
+  // No id means nothing to fetch, so don't start in a loading state.
+  const [loading, setLoading] = useState(Boolean(params.id));
   const [saving, setSaving] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // State is only set after an await, so this never triggers a cascading render.
   useEffect(() => {
-    if (Number.isNaN(jobId)) return; // loading already starts false for a bad id
+    if (!jobId) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -41,6 +52,20 @@ export default function JobDetailPage() {
       cancelled = true;
     };
   }, [jobId]);
+
+  async function writeDraft() {
+    setDrafting(true);
+    setError(null);
+    try {
+      const updated = await api.draft(jobId);
+      setJob(updated);
+      setDraft(updated.proposal_text ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not draft");
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   async function copyDraft() {
     try {
@@ -81,6 +106,7 @@ export default function JobDetailPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold">{job.title || "(untitled)"}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <PlatformTag platform={job.platform} />
             <span>{formatBudget(job)}</span>
             <span>{job.bid_count ?? "?"} bids</span>
             <span>{formatAge(job.posted_at)}</span>
@@ -108,12 +134,17 @@ export default function JobDetailPage() {
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Your proposal</h2>
 
-        {job.proposal_text === null ? (
-          <Empty>
-            No draft yet. Drafts are generated for the highest-scoring unrejected jobs on each
-            fetch — or write one here yourself.
-          </Empty>
-        ) : null}
+        {job.proposal_text === null && (
+          <Card className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              No draft yet. Each fetch only drafts the highest-scoring jobs, so this one is
+              waiting its turn.
+            </p>
+            <Button variant="primary" onClick={writeDraft} disabled={drafting}>
+              {drafting ? "Writing…" : "Draft with AI"}
+            </Button>
+          </Card>
+        )}
 
         <textarea
           value={draft}
@@ -132,9 +163,18 @@ export default function JobDetailPage() {
           <Button onClick={() => save({ proposal_text: draft })} disabled={!dirty || saving}>
             {saving ? "Saving…" : dirty ? "Save edits" : "Saved"}
           </Button>
+          {job.proposal_text !== null && (
+            <Button
+              onClick={writeDraft}
+              disabled={drafting}
+              title="Writes a fresh draft. The current one is kept as a version, so this is never destructive."
+            >
+              {drafting ? "Rewriting…" : "Rewrite with AI"}
+            </Button>
+          )}
           <Button
-            onClick={() => save({ status: "approved" })}
-            disabled={saving || job.status === "approved"}
+            onClick={() => save({ status: "APPLIED" })}
+            disabled={saving || job.status === "APPLIED"}
             title="Mark as sent — you paste it into Freelancer yourself"
           >
             Mark as sent
@@ -142,7 +182,7 @@ export default function JobDetailPage() {
           <Button
             variant="ghost"
             onClick={async () => {
-              await save({ status: "dismissed" });
+              await save({ status: "DISMISSED" });
               router.push("/queue");
             }}
             disabled={saving}
