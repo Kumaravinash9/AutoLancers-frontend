@@ -10,19 +10,19 @@ import { api, BidAvailability, formatAge, formatBudget, Job, JobStatus } from "@
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const jobId = Number(params.id);
+  const jobId = params.id;
 
   const [job, setJob] = useState<Job | null>(null);
   const [draft, setDraft] = useState("");
-  // A non-numeric id can never load, so don't start in a loading state for one.
-  const [loading, setLoading] = useState(() => !Number.isNaN(Number(params.id)));
+  // No id means nothing to fetch, so don't start in a loading state.
+  const [loading, setLoading] = useState(Boolean(params.id));
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // State is only set after an await, so this never triggers a cascading render.
   useEffect(() => {
-    if (Number.isNaN(jobId)) return; // loading already starts false for a bad id
+    if (!jobId) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -133,8 +133,8 @@ export default function JobDetailPage() {
             {saving ? "Saving…" : dirty ? "Save edits" : "Saved"}
           </Button>
           <Button
-            onClick={() => save({ status: "approved" })}
-            disabled={saving || job.status === "approved"}
+            onClick={() => save({ status: "APPLIED" })}
+            disabled={saving || job.status === "APPLIED"}
             title="Mark as sent — you paste it into Freelancer yourself"
           >
             Mark as sent
@@ -142,7 +142,7 @@ export default function JobDetailPage() {
           <Button
             variant="ghost"
             onClick={async () => {
-              await save({ status: "dismissed" });
+              await save({ status: "DISMISSED" });
               router.push("/queue");
             }}
             disabled={saving}

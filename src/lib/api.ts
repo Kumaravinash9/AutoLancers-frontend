@@ -8,7 +8,9 @@
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010";
 
-export type JobStatus = "new" | "drafted" | "approved" | "dismissed" | "submitted";
+// Mirrors RecommendationStatus in the backend. A job is DISMISSED when you pass on it;
+// APPLIED once a proposal has gone out.
+export type JobStatus = "NEW" | "VIEWED" | "APPLIED" | "DISMISSED";
 
 export interface BidAvailability {
   available: boolean;
@@ -28,9 +30,10 @@ export interface ScoreReason {
 }
 
 export interface Job {
-  id: number;
+  /** The recommendation's UUID. */
+  id: string;
   platform: string;
-  external_id: string;
+  external_id: string | null;
   title: string;
   description: string;
   url: string;
@@ -66,7 +69,7 @@ export interface Profile {
   keywords_include: string[];
   keywords_exclude: string[];
   fixed_project_min: number;
-  hourly_min: number;
+  rate_min: number;
   currency: string;
   max_existing_bids: number;
   min_match_score: number;
@@ -146,9 +149,9 @@ export const api = {
     return request<Job[]>(`/jobs?${query}`);
   },
 
-  getJob: (id: number) => request<Job>(`/jobs/${id}`),
+  getJob: (id: string) => request<Job>(`/jobs/${id}`),
 
-  patchJob: (id: number, patch: { proposal_text?: string; status?: JobStatus }) =>
+  patchJob: (id: string, patch: { proposal_text?: string; status?: JobStatus }) =>
     request<Job>(`/jobs/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 
   rescore: () => request<{ rescored: number }>("/jobs/rescore", { method: "POST" }),
@@ -163,7 +166,7 @@ export const api = {
   bidAvailability: () => request<BidAvailability>("/jobs/bid-availability"),
 
   /** Places a real bid. `confirm` is required by the backend — there is no implicit submit. */
-  placeBid: (id: number, body: { amount: number; period_days: number; confirm: true }) =>
+  placeBid: (id: string, body: { amount: number; period_days: number; confirm: true }) =>
     request<BidResult>(`/jobs/${id}/bid`, { method: "POST", body: JSON.stringify(body) }),
 
   runPipeline: () => request<CycleReport>("/pipeline/run", { method: "POST" }),

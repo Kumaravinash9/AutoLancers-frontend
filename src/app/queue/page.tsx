@@ -27,7 +27,7 @@ export default function QueuePage() {
     // "Needs review" is the subset you haven't acted on yet — approved and dismissed jobs stay
     // visible under "All matched" but drop out of the working queue.
     return tab === "review"
-      ? results.filter((j) => j.status === "new" || j.status === "drafted")
+      ? results.filter((j) => j.status === "NEW" || j.status === "VIEWED")
       : results;
   }, [tab]);
 

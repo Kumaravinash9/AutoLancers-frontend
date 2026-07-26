@@ -140,8 +140,8 @@ export default function ProfilePage() {
           />
           <NumberField
             label="Hourly min"
-            value={profile.hourly_min}
-            onChange={(v) => set("hourly_min", v)}
+            value={profile.rate_min}
+            onChange={(v) => set("rate_min", v)}
           />
           <NumberField
             label="Max bids"
