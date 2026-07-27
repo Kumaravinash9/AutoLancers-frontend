@@ -41,15 +41,18 @@ export const PLATFORMS = {
     { name: "Freelancer.com", status: "live" },
     { name: "Upwork", status: "next" },
     { name: "Fiverr", status: "next" },
+    { name: "Toptal", status: "next" },
     { name: "PeoplePerHour", status: "next" },
+    { name: "Guru", status: "next" },
   ],
 };
 
-/** A tight at-a-glance strip right under Credibility — one line each, no prose. */
+/** A tight at-a-glance strip right under Credibility — one line each, no prose. Kept distinct
+ *  from Comparison below: this is "what you get," Comparison is "how it's different." */
 export const GLANCE = [
   {
     title: "Skills-matched",
-    body: "Scored against your own skills and rate floors, not a generic keyword search.",
+    body: "Scored against your own skills and rate floors, every fetch.",
   },
   {
     title: "Transparent scoring",
@@ -60,6 +63,36 @@ export const GLANCE = [
     body: "Drafts wait for you. Bids need a second confirmation, every time.",
   },
 ];
+
+/**
+ * Positioning, not a new claim: contrasts keyword/save-search filtering (what most job-alert
+ * tools and marketplace saved searches actually do) against itemized scoring. Every point on the
+ * right is a real, already-shipped mechanic (reasons list, floors, keyword excludes, re-scoring),
+ * not something invented for this section.
+ */
+export const COMPARISON = {
+  kicker: "Why not just a saved search",
+  title: "A keyword match isn't a reason",
+  before: {
+    label: "Keyword search",
+    snippet: 'IF title CONTAINS "Next.js"\nTHEN show',
+    points: [
+      "Matches a word in the title, nothing else",
+      "No sense of your rate floor or budget fit",
+      "Can't tell you why a result showed up",
+      "Same list whether 2 bids are in or 40",
+    ],
+  },
+  after: {
+    label: "AutoLancers",
+    points: [
+      "Scores skills, budget, competition, and recency separately",
+      "Floors and excluded keywords filter before you ever see a job",
+      "Every match — and every rejection — shows its itemized reasons",
+      "Re-scores stored jobs the moment you change a setting",
+    ],
+  },
+};
 
 /**
  * Sample data for the LiveQueue signature — a coded replica of the actual queue + job-detail
@@ -121,6 +154,7 @@ export const PROOF = {
   context:
     "That's how fast a typical Freelancer.com listing fills up. Being early matters more than " +
     "being thorough — and you can't be early if you're reading everything yourself.",
+  callout: "A quiet queue and a wrong setting look identical — unless something tells you which.",
 };
 
 /** The real double-confirmation bid flow from jobs/[id]/page.tsx's BidPanel, replayed as a
@@ -160,6 +194,50 @@ export const PROFILE_DEMO = {
 };
 
 /**
+ * There's no one-click "mode" in the product — these are illustrations of what the same four
+ * sliders in PROFILE_DEMO.weights look like set differently, not a feature of their own. Said
+ * explicitly in the section copy so this doesn't read as a claim. Its own section rather than a
+ * decoration inside ProfileTuner, since it needs room for real body copy per example.
+ */
+export const PRESETS = {
+  kicker: "Flexibility",
+  title: "Your priorities change. The scoring can too.",
+  subhead:
+    "There's no built-in \"mode\" — just the same four sliders from your profile in Settings, set " +
+    "three different ways for three different situations.",
+  items: [
+    {
+      size: "large",
+      label: "Fast turnaround",
+      hook: "New to a marketplace, or just want the queue moving?",
+      body:
+        "Push competition and recency above budget, and jobs with only a couple of bids in the " +
+        "last hour jump to the top — even at modest pay. Good for building reviews and a track " +
+        "record before you start being picky.",
+      weightedToward: ["Competition", "Recency"],
+    },
+    {
+      size: "small",
+      label: "High value",
+      hook: "Already busy and only want it worth interrupting for?",
+      body:
+        "Push budget up and competition down, and only larger contracts clear the bar — no matter " +
+        "how many other bids are already in.",
+      weightedToward: ["Budget"],
+    },
+    {
+      size: "small",
+      label: "Skill-first",
+      hook: "Only want to see your exact stack?",
+      body:
+        "Push skills above everything else, and the queue ranks by how closely a listing matches " +
+        "what you've actually listed — budget and bid count barely move it.",
+      weightedToward: ["Skills"],
+    },
+  ] as const,
+};
+
+/**
  * The genuine trust gap with any automated filter: a quiet queue could mean nothing good was
  * posted, or it could mean a setting is wrong — and you can't tell which unless the rejections
  * say why. Real feature (Job.rejected / Job.rejection_reason, the queue page's Rejected tab),
@@ -191,11 +269,82 @@ export const REJECTED = {
   ],
 };
 
+/**
+ * A coded replica of the real Proposals page (src/app/proposals/page.tsx) — pairs every bid with
+ * the score that recommended it, the same "Calibration" stat strip (Total/Submitted/
+ * Selected/Avg score sent) from ProposalStats in lib/api.ts. The note below is that page's own
+ * caveat, reworded: ProposalStats.outcome_tracking_enabled is false until award status syncs back
+ * from the marketplace, so this isn't a live win-rate dashboard — it's honest about that, unlike
+ * a dashboard that would just show a percentage with no such caveat.
+ */
+export const CALIBRATION = {
+  kicker: "Track record",
+  title: "See if the score is actually calling it",
+  body:
+    "Every proposal keeps the score that recommended it. If your accepted work and your rejected " +
+    "work average about the same, the score isn't earning its place — and you'd see that here.",
+  stats: [
+    { label: "Total", value: "18", note: "6 still drafts" },
+    { label: "Submitted", value: "12", note: "9 from our picks" },
+    { label: "Selected", value: "4", note: "8 not selected" },
+    { label: "Avg score sent", value: "71.4", note: "76.2 on won work" },
+  ],
+  rows: [
+    {
+      title: "Next.js dashboard for a logistics team",
+      status: "ACCEPTED" as const,
+      score: 86,
+      recommended: true,
+    },
+    {
+      title: "Fix DeepStream counting pipeline",
+      status: "SUBMITTED" as const,
+      score: 69,
+      recommended: true,
+    },
+    {
+      title: "Landing page copy edit",
+      status: "REJECTED" as const,
+      score: 58,
+      recommended: false,
+    },
+  ],
+  note:
+    "Nothing syncs award status back from Freelancer.com automatically yet. A result here means " +
+    "you told it, not that it watched — Selected and Not selected are only ever self-reported.",
+};
+
+/**
+ * Freelancer.com's own bid-ranking system already weighs response time alongside rate and
+ * rating (https://www.freelancer.com/community/articles/understanding-freelancer-com-bid-ranking)
+ * — being early is a real ranking factor there, not a claim we invented. The ~25 second recheck
+ * is the actual poller interval already stated on the Settings page.
+ */
+export const STEPS_INTRO = {
+  kicker: "Getting set up",
+  title: "Four steps to your first shortlist",
+  subhead:
+    "Freelancer.com's own bid ranking already rewards whoever responds first. This is what runs " +
+    "before you ever open the tab, so you're early without watching the feed yourself.",
+};
+
 export const STEPS = [
-  { title: "Create your account", body: "Email and password. No card." },
-  { title: "Connect a marketplace", body: "One approval on Freelancer.com. Read access." },
-  { title: "Describe your work", body: "Skills, rate floors, and what you never want to see." },
-  { title: "Review your shortlist", body: "Open a match, read why it scored, edit, send." },
+  {
+    title: "Create your account",
+    body: "Email and password — no card, and no marketplace connection required yet.",
+  },
+  {
+    title: "Connect a marketplace",
+    body: "One OAuth approval on Freelancer.com. Read-only access; the bid scope is never requested.",
+  },
+  {
+    title: "Describe your work",
+    body: "Skills and their weights, rate floors, and any keywords to include or exclude — the same numbers behind every score.",
+  },
+  {
+    title: "Review your shortlist",
+    body: "The queue rechecks every 25 seconds. Open a match, read why it scored, edit the draft, and send it yourself.",
+  },
 ];
 
 export const FAQ_INTRO = {

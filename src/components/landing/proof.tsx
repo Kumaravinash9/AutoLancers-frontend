@@ -11,17 +11,17 @@ const CLIMB = [4, 6, 9, 14, 19, 24, 31, 40];
 
 function Sparkline({ inView, reduceMotion }: { inView: boolean; reduceMotion: boolean }) {
   const max = CLIMB[CLIMB.length - 1];
-  const barWidth = 10;
-  const gap = 6;
+  const barWidth = 8;
+  const gap = 5;
   return (
     <svg
       width={CLIMB.length * (barWidth + gap)}
-      height={56}
+      height={40}
       aria-hidden="true"
       className="shrink-0"
     >
       {CLIMB.map((v, i) => {
-        const h = (v / max) * 48;
+        const h = (v / max) * 34;
         return (
           <motion.rect
             key={i}
@@ -29,11 +29,11 @@ function Sparkline({ inView, reduceMotion }: { inView: boolean; reduceMotion: bo
             width={barWidth}
             rx={2}
             className={i === CLIMB.length - 1 ? "fill-figure" : "fill-border"}
-            initial={{ y: 56 - 4, height: 4 }}
-            animate={inView ? { y: 56 - h, height: h } : {}}
+            initial={{ y: 40 - 3, height: 3 }}
+            animate={inView ? { y: 40 - h, height: h } : {}}
             transition={{
               duration: reduceMotion ? 0.01 : 0.4,
-              delay: reduceMotion ? 0 : 0.15 + i * 0.05,
+              delay: reduceMotion ? 0 : 0.4 + i * 0.05,
               ease: "easeOut",
             }}
           />
@@ -43,31 +43,42 @@ function Sparkline({ inView, reduceMotion }: { inView: boolean; reduceMotion: bo
   );
 }
 
+/** The "problem" moment both reference sites open with — dramatized as a pull-quote rather than
+ *  a boxed stat card, since the point is to be felt in one line, not scanned. */
 export function Proof() {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
+  const inView = useInView(ref, { once: true, margin: "-100px" });
   const reduceMotion = useReducedMotion();
 
   return (
-    <section className="border-b border-border px-6 py-16">
-      <div
-        ref={ref}
-        className="mx-auto flex max-w-6xl flex-col items-start gap-6 rounded-xl border border-border bg-surface p-8 sm:flex-row sm:items-center sm:gap-10"
-      >
+    <section className="border-b border-border px-6 py-20">
+      <div ref={ref} className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
         <motion.p
-          className="shrink-0 font-display text-5xl font-semibold tabular-nums tracking-tight text-accent sm:text-6xl"
-          initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+          className="font-display text-3xl font-medium leading-snug tracking-tight text-balance sm:text-4xl"
+          initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: reduceMotion ? 0.01 : 0.4 }}
         >
-          <Counter value={PROOF.figure} active={inView} reduceMotion={!!reduceMotion} duration={1} />
-          <span className="text-2xl text-muted sm:text-3xl">+</span>
+          &ldquo;A typical Freelancer.com listing passes{" "}
+          <span className="whitespace-nowrap text-accent">
+            <Counter value={PROOF.figure} active={inView} reduceMotion={!!reduceMotion} duration={1} />
+            + bids
+          </span>{" "}
+          inside two hours.&rdquo;
         </motion.p>
+
+        <p className="max-w-xl leading-relaxed text-muted">{PROOF.context}</p>
+
+        <motion.p
+          className="max-w-lg border-l-2 border-accent/40 pl-4 text-left font-display italic leading-snug text-balance"
+          initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: reduceMotion ? 0.01 : 0.4, delay: reduceMotion ? 0 : 0.3 }}
+        >
+          {PROOF.callout}
+        </motion.p>
+
         <Sparkline inView={inView} reduceMotion={!!reduceMotion} />
-        <div className="max-w-2xl">
-          <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted">{PROOF.unit}</p>
-          <p className="mt-1.5 leading-relaxed text-balance">{PROOF.context}</p>
-        </div>
       </div>
     </section>
   );
