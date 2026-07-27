@@ -1,24 +1,27 @@
 @import "tailwindcss";
 
-/* Navy as the primary: it reads as trust and precision without the "AI SaaS" indigo/purple-blue
-   cliché. Ochre carries numerals so scores read as data, not as branding. Light theme only for
-   now — no dark variant, so nothing here should be conditioned on prefers-color-scheme. */
+/* One blue, used everywhere it should be: the accent on light sections, and the same blue as
+   the background of the dark bands (Steps, Close) rather than an unrelated near-black — so the
+   whole page reads as one color story, not "blue buttons on a generic dark slate." Background
+   is true white; --sunken/--border still read as a step down from it. Ochre carries numerals
+   so scores read as data, not as branding. Light theme only for now — no dark variant, so
+   nothing here should be conditioned on prefers-color-scheme. */
 :root {
-  --background: #f5f4f0;
+  --background: #ffffff;
   --surface: #ffffff;
-  --sunken: #eae8e2;
-  --border: #dde2e6;
-  --foreground: #101820;
-  --muted: #5b6b75;
-  --accent: #1b3a5c;
-  --accent-soft: #e4eaef;
+  --sunken: #edf1f7;
+  --border: #dce3ec;
+  --foreground: #101826;
+  --muted: #5b6672;
+  --accent: #1e3a8a;
+  --accent-soft: #e7ecf9;
   --figure: #b8862e;
-  --good: #1b3a5c;
+  --good: #1e3a8a;
   --warn: #9a6b12;
 
-  --deep: #101e2e;
-  --deep-fg: #eef2f5;
-  --deep-muted: #8fa0ac;
+  --deep: #1e3a8a;
+  --deep-fg: #f3f6fc;
+  --deep-muted: #a8b8de;
 }
 
 @theme inline {

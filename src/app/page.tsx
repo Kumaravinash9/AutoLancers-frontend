@@ -1,5 +1,7 @@
 import { BidConfirm } from "@/components/landing/bid-confirm";
+import { Calibration } from "@/components/landing/calibration";
 import { Close } from "@/components/landing/close";
+import { Comparison } from "@/components/landing/comparison";
 import { Credibility } from "@/components/landing/credibility";
 import { Faq } from "@/components/landing/faq";
 import { Footer } from "@/components/landing/footer";
@@ -7,6 +9,7 @@ import { Glance } from "@/components/landing/glance";
 import { Hero } from "@/components/landing/hero";
 import { LiveQueue } from "@/components/landing/live-queue";
 import { Platforms } from "@/components/landing/platforms";
+import { Presets } from "@/components/landing/presets";
 import { ProfileTuner } from "@/components/landing/profile-tuner";
 import { Proof } from "@/components/landing/proof";
 import { RejectedJobs } from "@/components/landing/rejected-jobs";
@@ -36,13 +39,16 @@ export default function HomePage() {
           <LiveQueue />
         </div>
       </div>
+      <Proof />
       <Credibility />
       <Platforms />
+      <Comparison />
+      <Presets />
       <Glance />
-      <Proof />
       <BidConfirm />
       <ProfileTuner />
       <RejectedJobs />
+      <Calibration />
       <Steps />
       <Faq />
       <Close />
