@@ -383,6 +383,8 @@ export interface ProfileCard {
   availability: string;
   status: string;
   platforms: string[];
+  /** True for the profile (account) the app is scoped to; at most one per user. */
+  is_selected: boolean;
   last_synced_at: string | null;
   bids_synced_at: string | null;
   recommendations: number;
@@ -390,10 +392,19 @@ export interface ProfileCard {
   wins: number;
 }
 
+/** One portfolio item mirrored from the marketplace (see connector `normalize_portfolio_entry`). */
+export interface PortfolioItem {
+  title: string;
+  description: string;
+  content_type: string | null;
+  featured: boolean;
+  image: string | null;
+}
+
 export interface ProfileDetail extends ProfileCard {
   bio: string;
   weighted_skills: { name: string; weight: number }[];
-  portfolio: Record<string, unknown>[];
+  portfolio: PortfolioItem[];
   experience: Record<string, unknown>[];
   education: Record<string, unknown>[];
   keywords_include: string[];

@@ -122,6 +122,59 @@ export default function ProfileDetailPage() {
         )}
       </Section>
 
+      <Section title={`Portfolio · ${profile.portfolio.length}`}>
+        {profile.portfolio.length === 0 ? (
+          <Empty>No portfolio items synced from the marketplace yet.</Empty>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {profile.portfolio.map((item, i) => (
+              <Card key={i} className="space-y-2 overflow-hidden">
+                {item.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.image}
+                    alt=""
+                    className="aspect-video w-full rounded object-cover"
+                  />
+                )}
+                <p className="font-medium">{item.title || "Untitled"}</p>
+                {item.description && (
+                  <p className="line-clamp-3 text-sm leading-relaxed text-muted">
+                    {item.description}
+                  </p>
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Experience">
+        {profile.experience.length === 0 ? (
+          <Empty>Not provided by the marketplace API — add it from your own records.</Empty>
+        ) : (
+          <div className="space-y-2">
+            {profile.experience.map((item, i) => (
+              <Card key={i}>
+                <p className="text-sm leading-relaxed text-muted">{entryText(item)}</p>
+              </Card>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {profile.education.length > 0 && (
+        <Section title="Education">
+          <div className="space-y-2">
+            {profile.education.map((item, i) => (
+              <Card key={i}>
+                <p className="text-sm leading-relaxed text-muted">{entryText(item)}</p>
+              </Card>
+            ))}
+          </div>
+        </Section>
+      )}
+
       <Section title="Connected marketplaces">
         {profile.connections.length === 0 ? (
           <Empty>Nothing connected. Discovery still works, with fewer fields.</Empty>
@@ -197,6 +250,14 @@ export default function ProfileDetailPage() {
       )}
     </Page>
   );
+}
+
+/** Experience/education entries have no fixed shape (they aren't synced), so render whatever
+ *  human-readable string values an entry carries. */
+function entryText(item: Record<string, unknown>): string {
+  return Object.values(item)
+    .filter((v): v is string | number => typeof v === "string" || typeof v === "number")
+    .join(" · ");
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
