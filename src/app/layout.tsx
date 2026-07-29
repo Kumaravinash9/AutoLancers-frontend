@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
+import { CaptureBanner } from "@/components/capture-banner";
 import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
@@ -43,6 +44,9 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <SiteNav />
+        {/* Above the content and below the nav, because it changes how to read everything under it:
+            a stale board looks exactly like a current one. Renders nothing when reading is fine. */}
+        <CaptureBanner />
         {/* No content box: the marketing page runs edge to edge, so each screen sets its own. */}
         <main className="flex-1">{children}</main>
       </body>

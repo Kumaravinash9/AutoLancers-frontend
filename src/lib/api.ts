@@ -473,3 +473,32 @@ export const demo = {
     request<DemoRequest>("/demo-requests", { method: "POST", body: JSON.stringify(body) }),
   list: () => request<DemoRequest[]>("/admin/demo-requests"),
 };
+
+
+/**
+ * Whether the browser extension can still read a marketplace.
+ *
+ * Mirrors `capture_statuses`. The failure this reports has no other symptom: signed out of Upwork, the
+ * extension reads a login page that loads perfectly, finds no jobs, and files an honest-looking zero —
+ * so the board keeps serving yesterday's scores as though they were current, and nothing errors.
+ */
+export interface CaptureStatus {
+  platform: string;
+  /** OK once reading works again; the row is cleared rather than appended to. */
+  status: "OK" | "SIGNED_OUT" | "BLOCKED";
+  detail: string | null;
+  page_key: string | null;
+  /** When it first went wrong, so "for three days" is sayable. Null while OK. */
+  since: string | null;
+  last_checked_at: string;
+  /** Null means the extension has never read this marketplace — not that anything expired. */
+  last_ok_at: string | null;
+}
+
+export const captures = {
+  /**
+   * Problems first, then most recently checked. An empty list means the extension has never
+   * reported in, which is not the same as "everything is fine" — nobody has looked.
+   */
+  status: () => request<CaptureStatus[]>("/ingest/status"),
+};
