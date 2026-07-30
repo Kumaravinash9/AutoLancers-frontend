@@ -502,3 +502,25 @@ export const captures = {
    */
   status: () => request<CaptureStatus[]>("/ingest/status"),
 };
+
+
+/** A minted API token. The plaintext is in the response and nowhere else, ever again. */
+export interface ApiToken {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+  token: string;
+}
+
+export const tokens = {
+  /**
+   * Mint a token for the browser extension.
+   *
+   * Session-authenticated, which is the point: the extension runs on Upwork's origin where this app's
+   * cookie is never sent, so it cannot mint its own. This app can, and hands the result over — which
+   * is why nobody has to paste a token into the extension's settings by hand.
+   */
+  create: (name = "Chrome extension") =>
+    request<ApiToken>("/accounts/tokens", { method: "POST", body: JSON.stringify({ name }) }),
+};

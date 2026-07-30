@@ -28,6 +28,23 @@ export const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID ?? "";
 
 export type SessionStatus = "signed_out" | "blocked";
 
+/**
+ * Collection settings pushed to the extension, so nobody has to open its options page.
+ *
+ * `useLlm` is the one that matters most here. It decides whether the backend shapes a capture into the
+ * schema it stores, so leaving it to a per-browser default means the feature is silently off for anyone
+ * who never opens those settings — and its absence looks like the model not helping rather than like a
+ * switch nobody could reach. Sent from here, an admin sets it once and every browser inherits it.
+ */
+export interface ExtensionSettings {
+  /** File each collected page with the backend as it finishes. */
+  pushToBackend?: boolean;
+  /** Let the backend use the LLM to fill what the selectors could not read. */
+  useLlm?: boolean;
+  /** Pages read at once. 1 is the safe default; 0 means all of them and has tripped bot detection. */
+  concurrency?: number;
+}
+
 export interface ExtensionState {
   running: boolean;
   platform: string | null;
@@ -44,7 +61,7 @@ export interface ExtensionState {
 type ExternalRuntime = {
   sendMessage: (
     id: string,
-    message: { type: string },
+    message: { type: string; [key: string]: unknown },
     callback: (response?: unknown) => void
   ) => void;
   connect: (id: string, info: { name: string }) => {
@@ -59,6 +76,36 @@ function runtime(): ExternalRuntime | null {
   if (!EXTENSION_ID) return null;
   const chrome = (globalThis as { chrome?: { runtime?: ExternalRuntime } }).chrome;
   return chrome?.runtime ?? null;
+}
+
+/**
+ * Hand the extension its backend address and a freshly minted token.
+ *
+ * The reason the extension needs no settings page. It runs on Upwork's origin, where this app's session
+ * cookie is never sent, so it cannot mint a token for itself — but this page can, and the two share a
+ * browser. The manifest's `externally_connectable` list decides who may do this, so no other site can.
+ *
+ * Safe to call on every sign-in: a token is cheap, and the alternative is asking whether the stored one
+ * still works, which needs the extension to hand it back. It never does — a token that leaves here is
+ * write-only from this side.
+ */
+export async function connectExtension(
+  apiUrl: string,
+  token: string,
+  settings: ExtensionSettings = {}
+): Promise<boolean> {
+  const api = runtime();
+  if (!api) return false;
+  return new Promise((resolve) => {
+    try {
+      api.sendMessage(EXTENSION_ID, { type: "connect", apiUrl, token, settings }, (response) => {
+        void api.lastError;
+        resolve(Boolean((response as { ok?: boolean } | undefined)?.ok));
+      });
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
 /** Whether the extension is installed and reachable from this page. */
