@@ -1,0 +1,13 @@
+# Code owners for AutoLancers-frontend.
+#
+# Owners are auto-requested for review on PRs touching the paths they own; the LAST matching pattern
+# wins. To *require* their approval, enable "Require review from Code Owners" in the branch
+# protection rule / ruleset for the protected branch. Owners must have write access to the repo.
+#
+# Replace @Kumaravinash9 with a team (e.g. @your-org/frontend) once there's more than one maintainer.
+
+# All paths.
+*             @Kumaravinash9
+
+# CI, ownership, and repo config — whoever changes the gates controls what "green" means.
+/.github/     @Kumaravinash9

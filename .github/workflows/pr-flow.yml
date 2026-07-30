@@ -1,0 +1,152 @@
+name: PR checks
+
+# Runs on pull requests into main and develop, per commit (`synchronize` fires on every push to the
+# PR head). Each stage is its own step — Branch policy, Install, Lint, Typecheck, Build — and two
+# final steps report the outcome to one Check Run named `code-stability` (the check the ruleset
+# requires): the stage that failed with its output, or success with the PR number/title and commit.
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+# Per-commit: don't cancel an in-flight run when the next commit arrives, so every commit gets its
+# own completed status. Grouped per commit SHA so a re-run of the same commit still de-dupes.
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
+  cancel-in-progress: false
+
+# Writing the Check Run needs this. (On fork PRs the token is read-only, so the report step no-ops.)
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  # Named differently from the Check Run it reports, so `code-stability` is unambiguously the single
+  # API-created check the ruleset requires — not this job's own status.
+  checks:
+    name: PR checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      # --- stages: each its own step, each teeing its output to a log the reporter can read. The
+      # default bash shell runs with `-eo pipefail`, so a failing command fails the step despite tee.
+      - name: Branch policy
+        id: policy
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$BASE" = "main" ] && [ "$HEAD" != "develop" ]; then
+            printf 'A PR into main must come from develop, not %s.\nMerge your branch into develop first, then open a develop -> main PR.\n' "$HEAD" | tee "$RUNNER_TEMP/policy.log"
+            exit 1
+          fi
+          printf 'PR from %s into %s is allowed.\n' "$HEAD" "$BASE" | tee "$RUNNER_TEMP/policy.log"
+
+      - name: Install
+        id: install
+        run: npm ci 2>&1 | tee "$RUNNER_TEMP/install.log"
+
+      - name: Lint
+        id: lint
+        run: npm run lint 2>&1 | tee "$RUNNER_TEMP/lint.log"
+
+      - name: Typecheck
+        id: typecheck
+        run: npx tsc --noEmit 2>&1 | tee "$RUNNER_TEMP/typecheck.log"
+
+      - name: Build
+        id: build
+        run: npm run build 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      # Step 1 of 2: find the outcome — which stage failed, its message, and the resulting status —
+      # and expose them as outputs. Runs even when a stage failed (if: always()). No API call here.
+      - name: Collect code-stability result
+        id: result
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          POLICY: ${{ steps.policy.outcome }}
+          INSTALL: ${{ steps.install.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+        with:
+          script: |
+            const fs = require("fs");
+            const pr = context.payload.pull_request;
+
+            // Same order as the steps above; `outcome` is success | failure | skipped | cancelled.
+            const stages = [
+              { name: "Branch policy", outcome: process.env.POLICY, log: "policy" },
+              { name: "Install", outcome: process.env.INSTALL, log: "install" },
+              { name: "Lint", outcome: process.env.LINT, log: "lint" },
+              { name: "Typecheck", outcome: process.env.TYPECHECK, log: "typecheck" },
+              { name: "Build", outcome: process.env.BUILD, log: "build" },
+            ];
+            const icon = (o) => (o === "success" ? "✅" : o === "failure" ? "❌" : "⏭️");
+            const lines = stages.map((s) => `${icon(s.outcome)} ${s.name}${
+              s.outcome && s.outcome !== "success" && s.outcome !== "failure" ? ` — ${s.outcome}` : ""
+            }`);
+
+            const failed = stages.find((s) => s.outcome === "failure");
+            const where = `PR #${pr.number} — ${pr.title}\n` +
+              `Commit ${pr.head.sha.slice(0, 7)} (${pr.head.ref} → ${pr.base.ref})`;
+
+            let conclusion, title, summary;
+            if (failed) {
+              conclusion = "failure";
+              title = `Failed at: ${failed.name}`;
+              let tail = "(no output)";
+              try {
+                tail = fs.readFileSync(`${process.env.RUNNER_TEMP}/${failed.log}.log`, "utf8")
+                  .trim().split("\n").slice(-40).join("\n") || "(no output)";
+              } catch {}
+              summary = `${where}\n\n${lines.join("\n")}\n\n### ${failed.name} output\n\`\`\`\n${tail}\n\`\`\``;
+              core.error(`${failed.name} failed.\n${tail.split("\n").slice(-25).join("\n")}`,
+                         { title: `code-stability: ${failed.name} failed` });
+            } else {
+              conclusion = "success";
+              title = "All stages passed";
+              summary = `${where} — all checks green.\n\n${lines.join("\n")}`;
+            }
+
+            core.setOutput("conclusion", conclusion);
+            core.setOutput("title", title);
+            core.setOutput("summary", summary);
+
+      # Step 2 of 2: create the code-stability check in its final state — one call. Consumes step 1's
+      # outputs via env (so nothing is shell-evaluated). No-op on fork PRs (read-only token).
+      - name: Report code-stability check
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          CONCLUSION: ${{ steps.result.outputs.conclusion }}
+          TITLE: ${{ steps.result.outputs.title }}
+          SUMMARY: ${{ steps.result.outputs.summary }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (pr.head.repo.full_name !== context.payload.repository.full_name) {
+              core.info("Fork PR — read-only token, cannot write the check.");
+              return;
+            }
+            const now = new Date().toISOString();
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "code-stability",
+              head_sha: pr.head.sha,
+              status: "completed",
+              conclusion: process.env.CONCLUSION,
+              started_at: now,
+              completed_at: now,
+              output: { title: process.env.TITLE, summary: process.env.SUMMARY },
+            });
+            core.info(`code-stability: ${process.env.CONCLUSION} — ${process.env.TITLE}`);
