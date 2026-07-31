@@ -92,13 +92,26 @@ function runtime(): ExternalRuntime | null {
 export async function connectExtension(
   apiUrl: string,
   token: string,
-  settings: ExtensionSettings = {}
+  settings: ExtensionSettings = {},
+  userId?: string
 ): Promise<boolean> {
   const api = runtime();
   if (!api) return false;
   return new Promise((resolve) => {
     try {
-      api.sendMessage(EXTENSION_ID, { type: "connect", apiUrl, token, settings }, (response) => {
+      api.sendMessage(
+        EXTENSION_ID,
+        {
+          type: "connect",
+          apiUrl,
+          token,
+          settings,
+          userId,
+          // The extension learns the backend's address from the handover but has no way to learn
+          // this app's — different origins, and only the app knows its own.
+          appUrl: globalThis.location?.origin,
+        },
+        (response) => {
         void api.lastError;
         resolve(Boolean((response as { ok?: boolean } | undefined)?.ok));
       });
@@ -109,7 +122,12 @@ export async function connectExtension(
 }
 
 /** Why a sync could not start. Each needs a different sentence, not one "sync failed". */
-export type SyncRefusal = "needs_token" | "revoked" | "unreachable" | "unknown_platform";
+export type SyncRefusal =
+  | "needs_token"
+  | "revoked"
+  | "unreachable"
+  | "unknown_platform"
+  | "different_user";
 
 export interface SyncResult {
   ok: boolean;
@@ -126,12 +144,12 @@ export interface SyncResult {
  * question is whether it still works — and when it does not, the fix is here rather than there. The
  * extension has no login of its own on purpose; this app mints the token, so this app re-mints it.
  */
-export async function syncExtension(platform = "upwork"): Promise<SyncResult> {
+export async function syncExtension(platform = "upwork", userId?: string): Promise<SyncResult> {
   const api = runtime();
   if (!api) return { ok: false, reason: "unreachable" };
   return new Promise((resolve) => {
     try {
-      api.sendMessage(EXTENSION_ID, { type: "sync", platform }, (response) => {
+      api.sendMessage(EXTENSION_ID, { type: "sync", platform, userId }, (response) => {
         void api.lastError;
         resolve((response as SyncResult | undefined) ?? { ok: false, reason: "unreachable" });
       });

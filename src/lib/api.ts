@@ -513,6 +513,29 @@ export interface ApiToken {
   token: string;
 }
 
+/** A JWT the app mints for the extension, and who it belongs to. */
+export interface ExtensionToken {
+  token: string;
+  user_id: string;
+  email: string;
+  expires_at: string;
+}
+
+export const session = {
+  /**
+   * Mint a JWT for the extension, authenticated by this app's cookie.
+   *
+   * The extension cannot ask for this itself — it runs on Upwork's origin, where the cookie is never
+   * sent. What comes back is *not* the session: that stays httpOnly and unreadable by JavaScript.
+   * This is a separate token carrying `aud: extension`, refused anywhere a session belongs.
+   *
+   * `user_id` is the part that fixes multi-user. The extension holds one credential at a time, so a
+   * browser where someone else signed in afterwards would keep the first person's — and file their
+   * marketplace data into the wrong account, with a progress bar and no error.
+   */
+  extensionToken: () => request<ExtensionToken>("/accounts/session/extension", { method: "POST" }),
+};
+
 export const tokens = {
   /**
    * Mint a token for the browser extension.

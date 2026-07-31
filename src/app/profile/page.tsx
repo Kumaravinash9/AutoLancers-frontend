@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAccountScope } from "@/components/account-scope";
 import { ConnectUpwork } from "@/components/connect-upwork";
@@ -30,25 +30,35 @@ export default function ProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [list, conns] = await Promise.all([profiles.list(), connectionsApi.list()]);
-        if (!cancelled) {
-          setProfile(list[0] ?? null);
-          setAccounts(conns);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Could not load profiles");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  /**
+   * Fetch the accounts and the profile.
+   *
+   * Callable again rather than only on mount, because a sync through the extension changes exactly
+   * what this page renders: connecting Upwork creates the account row, and the run that follows fills
+   * the board behind it. Without a re-fetch the page keeps showing what it loaded before any of that
+   * happened — and shows it confidently, which is the part that misleads.
+   */
+  const load = useCallback(async () => {
+    try {
+      const [list, conns] = await Promise.all([profiles.list(), connectionsApi.list()]);
+      setProfile(list[0] ?? null);
+      setAccounts(conns);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load profiles");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    // Inside an async call rather than `void load()` directly: the state updates then happen after an
+    // await rather than synchronously in the effect body, which is the shape React wants and the
+    // reason the original was written this way.
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
 
   if (loading) return <Page><Empty>Loading…</Empty></Page>;
   if (error) return <Page><ErrorNote>{error}</ErrorNote></Page>;
@@ -76,7 +86,7 @@ export default function ProfilesPage() {
               onRemoved={(id) => setAccounts((prev) => prev.filter((a) => a.id !== id))}
             />
           ))}
-        <ConnectCard />
+        <ConnectCard onFinished={load} />
       </div>
     </Page>
   );
@@ -281,7 +291,7 @@ const PLATFORMS = [
   },
 ] as const;
 
-function ConnectCard() {
+function ConnectCard({ onFinished }: { onFinished?: () => void }) {
   const [picking, setPicking] = useState(false);
 
   if (!picking) {
@@ -331,7 +341,7 @@ function ConnectCard() {
                 <span className="block text-sm font-medium">{platform.name}</span>
                 <span className="mt-0.5 block text-xs text-muted">{platform.detail}</span>
               </div>
-              <ConnectUpwork />
+              <ConnectUpwork onFinished={onFinished} />
             </li>
           ) : (
             <li
