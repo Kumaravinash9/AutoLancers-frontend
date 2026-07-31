@@ -40,8 +40,9 @@ export function ConnectUpwork() {
     setState("working");
     setDetail(null);
     try {
-      // Minted here rather than asked for: this page is signed in and the extension cannot be.
-      const { token } = await tokens.create("Chrome extension");
+      // Minted here rather than asked for: this page is signed in and the extension cannot be. The
+      // tokens this replaces are revoked, so pressing Connect twice does not leave two live keys.
+      const { token } = await tokens.issueForExtension();
       // useLlm on, because the extension's settings are hidden and a per-browser default would leave
       // it off for everyone — see ExtensionSettings.
       const ok = await connectExtension(API_URL, token, { pushToBackend: true, useLlm: true });

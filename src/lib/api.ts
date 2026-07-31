@@ -523,4 +523,29 @@ export const tokens = {
    */
   create: (name = "Chrome extension") =>
     request<ApiToken>("/accounts/tokens", { method: "POST", body: JSON.stringify({ name }) }),
+  list: () => request<Omit<ApiToken, "token">[]>("/accounts/tokens"),
+  revoke: (id: string) => request<void>(`/accounts/tokens/${id}`, { method: "DELETE" }),
+
+  /**
+   * Mint the extension a token and revoke the ones it replaces.
+   *
+   * A token's plaintext exists only in the response that creates it, so reconnecting cannot reuse the
+   * old one — it has to mint. Without this, every press of Connect left another live credential behind
+   * with nothing to revoke it: five presses, five keys to the account, four of them forgotten.
+   *
+   * Minted before the old ones are revoked, deliberately. The other order leaves you with no working
+   * token if the second call fails, and "connected" is the state worth protecting. A revoke that fails
+   * costs a stale token; a mint that fails after revoking costs the connection.
+   */
+  async issueForExtension(name = "Chrome extension"): Promise<ApiToken> {
+    const previous = await tokens.list().catch(() => []);
+    const fresh = await tokens.create(name);
+    await Promise.all(
+      previous
+        .filter((old) => old.name === name && old.id !== fresh.id)
+        // One failure must not cost the others, or the first stale token blocks every later cleanup.
+        .map((old) => tokens.revoke(old.id).catch(() => undefined))
+    );
+    return fresh;
+  },
 };
