@@ -108,6 +108,39 @@ export async function connectExtension(
   });
 }
 
+/** Why a sync could not start. Each needs a different sentence, not one "sync failed". */
+export type SyncRefusal = "needs_token" | "revoked" | "unreachable" | "unknown_platform";
+
+export interface SyncResult {
+  ok: boolean;
+  started?: boolean;
+  pages?: number;
+  reason?: SyncRefusal | "already_running";
+}
+
+/**
+ * Ask the extension to read your profile and job feeds.
+ *
+ * It checks its credential first and refuses with a reason rather than starting a run that would fail
+ * page by page. There is nothing to *refresh*: an API token has no expiry, only a revocation, so the
+ * question is whether it still works — and when it does not, the fix is here rather than there. The
+ * extension has no login of its own on purpose; this app mints the token, so this app re-mints it.
+ */
+export async function syncExtension(platform = "upwork"): Promise<SyncResult> {
+  const api = runtime();
+  if (!api) return { ok: false, reason: "unreachable" };
+  return new Promise((resolve) => {
+    try {
+      api.sendMessage(EXTENSION_ID, { type: "sync", platform }, (response) => {
+        void api.lastError;
+        resolve((response as SyncResult | undefined) ?? { ok: false, reason: "unreachable" });
+      });
+    } catch {
+      resolve({ ok: false, reason: "unreachable" });
+    }
+  });
+}
+
 /** Whether the extension is installed and reachable from this page. */
 export async function isInstalled(): Promise<boolean> {
   const api = runtime();
