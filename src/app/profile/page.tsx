@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useAccountScope } from "@/components/account-scope";
+import { ConnectUpwork } from "@/components/connect-upwork";
 import { Card, Empty, ErrorNote, Page } from "@/components/ui";
 import {
   API_URL,
@@ -249,11 +250,14 @@ function AccountCard({
 }
 
 /**
- * Marketplaces you can attach an account from.
+ * Marketplaces you can attach an account from, and how each is attached.
  *
- * Only Freelancer.com is connectable, and the others say why rather than sitting greyed out with
- * no explanation. Upwork's restriction is a policy one, not a missing feature — its automation
- * rules prohibit watcher tools even with approved API access, so it is not a matter of waiting.
+ * Three different answers, not two. Freelancer.com is an OAuth redirect. Fiverr has no public API for
+ * seller-side work and nothing to connect to. Upwork is neither: its automation policy prohibits
+ * tools that *watch* the board, which is why there is no poller for it — but the browser extension is
+ * not a watcher. It reads a page you opened, when you click, and stops. So Upwork connects through
+ * that, and its row is a component rather than a link, because handing the extension its credentials
+ * is a conversation with the browser rather than a navigation.
  */
 const PLATFORMS = [
   {
@@ -265,8 +269,9 @@ const PLATFORMS = [
   {
     id: "upwork",
     name: "Upwork",
-    detail: "Not supported. Upwork's automation policy prohibits tools that watch the job feed.",
+    detail: "Through the browser extension — it reads pages you open, when you click.",
     href: null,
+    connect: "extension" as const,
   },
   {
     id: "fiverr",
@@ -319,6 +324,14 @@ function ConnectCard() {
                 <span className="block text-sm font-medium">{platform.name}</span>
                 <span className="mt-0.5 block text-xs text-muted">{platform.detail}</span>
               </a>
+            </li>
+          ) : "connect" in platform ? (
+            <li key={platform.id} className="space-y-2 rounded-md border border-border px-3 py-2">
+              <div>
+                <span className="block text-sm font-medium">{platform.name}</span>
+                <span className="mt-0.5 block text-xs text-muted">{platform.detail}</span>
+              </div>
+              <ConnectUpwork />
             </li>
           ) : (
             <li
