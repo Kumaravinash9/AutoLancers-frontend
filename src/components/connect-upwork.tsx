@@ -82,10 +82,13 @@ export function ConnectUpwork() {
   if (state === "done") {
     return (
       <div className="space-y-1.5">
-        <p className="text-xs font-medium text-accent">Extension connected.</p>
+        <p className="text-xs font-medium text-accent">
+          Extension connected — it just opened its own page to confirm.
+        </p>
         <p className="text-xs text-muted">
-          Open your Upwork profile and click the AutoLancers icon to capture it — that is what creates
-          the account here. Then <b>Collect my pages…</b> gathers your feeds.
+          Now open your Upwork profile and click the AutoLancers icon to capture it. That is what
+          creates the account here: until a profile is read there is no Upwork handle to attach it to.
+          Then <b>Collect my pages…</b> gathers your feeds.
         </p>
       </div>
     );
