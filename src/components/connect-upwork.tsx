@@ -93,13 +93,15 @@ export function ConnectUpwork({ onFinished }: { onFinished?: () => void } = {}) 
    */
   async function handOver(): Promise<string> {
     const issued = await session.extensionToken();
-    const ok = await connectExtension(
+    const handover = await connectExtension(
       API_URL,
       issued.token,
       { pushToBackend: true, useLlm: true },
       issued.user_id
     );
-    if (!ok) throw new Error("The extension did not accept the handover.");
+    // The extension's own words when it gave any. "Did not accept the handover" is true of every
+    // failure here and tells you which of them it was in none of the cases.
+    if (!handover.ok) throw new Error(handover.error ?? "The extension did not accept the handover.");
     return issued.user_id;
   }
 
@@ -167,6 +169,15 @@ export function ConnectUpwork({ onFinished }: { onFinished?: () => void } = {}) 
             <b>Load unpacked</b> → pick the <code>extension</code> folder
           </li>
         </ol>
+        {EXTENSION_ID && (
+          // Set but unanswered. That is a different problem from unset, and pointing at the install
+          // steps for it would send someone to reinstall an extension they already have.
+          <p className="text-xs text-amber-600">
+            An extension with id <code>{EXTENSION_ID.slice(0, 12)}…</code> did not answer. If it is
+            installed, check the id matches the one at <code>chrome://extensions</code> and reload it
+            there — a rebuilt or re-added extension gets a new id.
+          </p>
+        )}
         {!EXTENSION_ID && (
           // The id cannot be discovered by a page, and an unpacked build gets a different one per
           // machine — so "not installed" and "installed but I wasn't told its id" look identical from

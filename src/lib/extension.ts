@@ -94,9 +94,16 @@ export async function connectExtension(
   token: string,
   settings: ExtensionSettings = {},
   userId?: string
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
   const api = runtime();
-  if (!api) return false;
+  if (!api) {
+    return {
+      ok: false,
+      error: EXTENSION_ID
+        ? "No extension reachable from this page."
+        : "NEXT_PUBLIC_EXTENSION_ID is not set, so this page cannot address the extension.",
+    };
+  }
   return new Promise((resolve) => {
     try {
       api.sendMessage(
@@ -112,11 +119,26 @@ export async function connectExtension(
           appUrl: globalThis.location?.origin,
         },
         (response) => {
-        void api.lastError;
-        resolve(Boolean((response as { ok?: boolean } | undefined)?.ok));
-      });
-    } catch {
-      resolve(false);
+          // The extension's own reason, when it gave one. Reducing this to a boolean is why a failed
+          // connect said only "the extension did not accept the handover" — true of every failure
+          // here, and no help at all in telling a wrong id from a stale build from a bad token.
+          const reply = response as { ok?: boolean; error?: string } | undefined;
+          const lastError = api.lastError?.message;
+          resolve({
+            ok: Boolean(reply?.ok),
+            error:
+              reply?.error ??
+              (lastError
+                ? `${lastError} — check the id at chrome://extensions matches ` +
+                  `NEXT_PUBLIC_EXTENSION_ID, then reload the extension there.`
+                : reply
+                  ? undefined
+                  : "The extension did not reply."),
+          });
+        }
+      );
+    } catch (err) {
+      resolve({ ok: false, error: err instanceof Error ? err.message : String(err) });
     }
   });
 }
