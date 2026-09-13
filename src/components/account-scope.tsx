@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Connection, connections as connectionsApi } from "@/lib/api";
+import { Connection, connections as connectionsApi, isConnectionError } from "@/lib/api";
+import { DEMO_CONNECTIONS } from "@/lib/demo-data";
 
 const EVENT = "al:account-changed";
 
@@ -27,8 +28,8 @@ export function useAccountScope() {
       try {
         const list = await connectionsApi.list();
         if (!cancelled) setAccounts(list);
-      } catch {
-        if (!cancelled) setAccounts([]);
+      } catch (err) {
+        if (!cancelled) setAccounts(isConnectionError(err) ? DEMO_CONNECTIONS : []);
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -44,10 +45,16 @@ export function useAccountScope() {
   }, []);
 
   const select = useCallback(async (id: string | null) => {
-    // Apply the server's answer rather than assuming: it is the one that knows whether the id is
-    // still connected.
-    const updated = await connectionsApi.select(id);
-    setAccounts(updated);
+    try {
+      // Apply the server's answer rather than assuming: it is the one that knows whether the
+      // id is still connected.
+      const updated = await connectionsApi.select(id);
+      setAccounts(updated);
+    } catch (err) {
+      if (!isConnectionError(err)) throw err;
+      // Demo mode has no server to confirm the switch with — just reflect it locally.
+      setAccounts((prev) => prev.map((a) => ({ ...a, is_selected: a.id === id })));
+    }
     window.dispatchEvent(new Event(EVENT));
   }, []);
 

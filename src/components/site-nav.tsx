@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AccountSwitcher } from "@/components/account-scope";
 import { Account, accounts } from "@/lib/api";
-import { APP_NAV, AUTH_LINKS, BRAND, MARKETING_NAV, MARKETING_ROUTES } from "@/content/site";
+import { APP_NAV, AUTH_LINKS, BRAND, MARKETING_NAV, MARKETING_ROUTES, matchNavItem } from "@/content/site";
 
 /**
  * One nav, two audiences.
@@ -85,7 +85,7 @@ export function SiteNav() {
           <>
             <nav className="flex gap-5 text-sm">
               {APP_NAV.map((item) => {
-                const active = pathname.startsWith(item.href);
+                const active = matchNavItem(pathname)?.href === item.href;
                 return (
                   <Link
                     key={item.href}
