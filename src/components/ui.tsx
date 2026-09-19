@@ -21,6 +21,7 @@ type ButtonProps = {
   disabled?: boolean;
   type?: "button" | "submit";
   title?: string;
+  className?: string;
 };
 
 export function Button({
@@ -30,9 +31,10 @@ export function Button({
   disabled,
   type = "button",
   title,
+  className = "",
 }: ButtonProps) {
   const base =
-    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
   const styles = {
     primary: "bg-accent text-white hover:opacity-90",
     secondary: "border border-border bg-surface hover:bg-accent-soft",
@@ -40,20 +42,31 @@ export function Button({
   }[variant];
 
   return (
-    <button type={type} onClick={onClick} disabled={disabled} title={title} className={`${base} ${styles}`}>
+    <button type={type} onClick={onClick} disabled={disabled} title={title} className={`${base} ${styles} ${className}`}>
       {children}
     </button>
   );
 }
 
 /** Score pill. Colour is a coarse signal only — the reasons list is the real explanation. */
-export function ScoreBadge({ score }: { score: number }) {
+/** `size="lg"` is the detail-page header treatment (jobs/[id], proposals/[id]) — big enough to
+ *  read as the page's headline stat from across the row, not just another meta chip. Every
+ *  table/list usage keeps the compact default. */
+export function ScoreBadge({ score, size = "sm" }: { score: number; size?: "sm" | "lg" }) {
   const tone =
     score >= 75
       ? "bg-good/15 text-good"
       : score >= 55
         ? "bg-warn/15 text-warn"
         : "bg-muted/15 text-muted";
+  if (size === "lg") {
+    return (
+      <div className={`flex shrink-0 flex-col items-center justify-center rounded-2xl px-5 py-3 ${tone}`}>
+        <span className="font-display text-3xl leading-none font-bold tabular-nums">{score.toFixed(0)}</span>
+        <span className="mt-1 text-[0.65rem] font-semibold tracking-wide uppercase opacity-70">Score</span>
+      </div>
+    );
+  }
   return (
     <span className={`rounded-md px-2 py-0.5 text-sm font-semibold tabular-nums ${tone}`}>
       {score.toFixed(0)}

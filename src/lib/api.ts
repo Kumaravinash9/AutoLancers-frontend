@@ -42,6 +42,11 @@ export interface Job {
   budget_min: number | null;
   budget_max: number | null;
   currency: string | null;
+  /** Local-currency mirror of budget_min/max, converted server-side when the posting's own
+   *  currency differs from the freelancer's. Null when no conversion was needed/possible. */
+  local_currency: string | null;
+  budget_min_local: number | null;
+  budget_max_local: number | null;
   bid_count: number | null;
   posted_at: string | null;
   score: number;
@@ -55,6 +60,23 @@ export interface Job {
   bid_period_days: number | null;
   bid_submitted_at: string | null;
   external_bid_id: string | null;
+  /** True when the poller re-fetched this posting and something changed since first seen. */
+  has_changes: boolean;
+  changed_at: string | null;
+
+  /** Client-quality signal, the same "who's actually posting this" context Upwork's own
+   *  listing page and third-party tools like Vollna/Vibeworker surface next to a job — optional
+   *  because no real endpoint returns it yet; present on demo jobs, absent (undefined) on real
+   *  ones until the backend adds it. Never render a zero/false as if it were a real "no" — treat
+   *  a missing value as "unknown", not "bad". */
+  client_country?: string | null;
+  client_payment_verified?: boolean | null;
+  client_rating?: number | null;
+  client_reviews_count?: number | null;
+  /** Total lifetime spend on the platform, in `currency`. */
+  client_total_spend?: number | null;
+  /** Share of jobs this client has posted that resulted in a hire, 0–100. */
+  client_hire_rate?: number | null;
 }
 
 export interface Skill {
@@ -62,15 +84,26 @@ export interface Skill {
   weight: number;
 }
 
+export interface SuggestedSkill {
+  name: string;
+  weight: number;
+  reason: string;
+  /** Where the LLM found evidence for this skill. */
+  source: "headline" | "bio" | "portfolio" | "experience" | "account" | "proposals";
+}
+
 export interface Profile {
   display_name: string;
   headline: string;
   skills: Skill[];
+  /** LLM-proposed skills not yet confirmed — never used for scoring until accepted. */
+  suggested_skills: SuggestedSkill[];
   keywords_include: string[];
   keywords_exclude: string[];
   fixed_project_min: number;
   rate_min: number;
   currency: string;
+  country: string | null;
   /** Bid count at which competition scores half marks. Not a cap — nothing is hidden for being busy. */
   crowded_at_bids: number;
   min_match_score: number;
@@ -114,6 +147,13 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/** True only for "couldn't reach the backend at all" (status 0, set below) — never for a real
+ *  4xx/5xx. Dashboard cards use this to decide whether to fall back to demo data; a real error
+ *  (like a 401) should still surface as an error, not silently become a demo view. */
+export function isConnectionError(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 0;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -171,6 +211,16 @@ export const api = {
   saveProfile: (profile: Profile) =>
     request<Profile>("/profile", { method: "PUT", body: JSON.stringify(profile) }),
 
+  /** LLM reads headline/bio/portfolio/experience/account/proposal history and proposes
+   *  skills the profile under-lists — populates `Profile.suggested_skills`. */
+  suggestSkills: () => request<Profile>("/profile/skills/suggest", { method: "POST" }),
+
+  acceptSkills: (skills: Skill[]) =>
+    request<Profile>("/profile/skills/accept", { method: "POST", body: JSON.stringify({ skills }) }),
+
+  rejectSkills: (names: string[]) =>
+    request<Profile>("/profile/skills/reject", { method: "POST", body: JSON.stringify({ names }) }),
+
   authStatus: () => request<AuthStatus>("/auth/status"),
 
   bidAvailability: () => request<BidAvailability>("/jobs/bid-availability"),
@@ -193,6 +243,13 @@ export function formatBudget(job: Job): string {
   return `${stated!.toFixed(0)} ${currency}${kind}`.trim();
 }
 
+/** The working-queue subset — scored and drafted, but not yet acted on. Shared by the
+ *  queue page's "Needs review" tab and the dashboard's preview panel so the definition
+ *  can't drift between the two. */
+export function needsReview(jobs: Job[]): Job[] {
+  return jobs.filter((j) => j.status === "NEW" || j.status === "VIEWED");
+}
+
 export function formatAge(iso: string | null): string {
   if (!iso) return "unknown";
   const minutes = (Date.now() - new Date(iso).getTime()) / 60000;
@@ -205,7 +262,7 @@ export function formatAge(iso: string | null): string {
 // --- accounts and admin ---
 
 export interface Account {
-  id: number;
+  id: string;
   email: string;
   role: "user" | "admin";
   is_active: boolean;
@@ -230,7 +287,7 @@ export interface AdminOverview {
 }
 
 export interface CycleRun {
-  id: number;
+  id: string;
   started_at: string;
   duration_ms: number;
   fetched: number;
@@ -331,10 +388,30 @@ export interface SyncReport {
   error: string | null;
 }
 
+export const PROPOSAL_STATUS_TONE: Record<ProposalRow["status"], string> = {
+  DRAFT: "bg-sunken text-muted",
+  SUBMITTED: "bg-accent-soft text-accent",
+  ACCEPTED: "bg-good/15 text-good",
+  REJECTED: "bg-warn/15 text-warn",
+  WITHDRAWN: "bg-sunken text-muted",
+};
+
+// The client's word for ACCEPTED is "you were selected", so say that rather than echoing an
+// internal enum at someone reading their own results.
+export const PROPOSAL_STATUS_LABEL: Record<ProposalRow["status"], string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "Sent",
+  ACCEPTED: "Selected",
+  REJECTED: "Not selected",
+  // Reachable only once outcome syncing exists; today a sent bid stays "Sent".
+  WITHDRAWN: "Withdrawn",
+};
+
 export const proposals = {
   sync: () => request<SyncReport>("/proposals/sync", { method: "POST" }),
   list: (connectionId?: string | null) =>
     request<ProposalRow[]>(`/proposals${connectionId ? `?connection_id=${connectionId}` : ""}`),
+  get: (id: string) => request<ProposalRow>(`/proposals/${id}`),
   stats: (connectionId?: string | null) =>
     request<ProposalStats>(
       `/proposals/stats${connectionId ? `?connection_id=${connectionId}` : ""}`,

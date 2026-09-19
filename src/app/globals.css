@@ -1,27 +1,48 @@
 @import "tailwindcss";
 
-/* One blue, used everywhere it should be: the accent on light sections, and the same blue as
-   the background of the dark bands (Steps, Close) rather than an unrelated near-black — so the
-   whole page reads as one color story, not "blue buttons on a generic dark slate." Background
-   is true white; --sunken/--border still read as a step down from it. Ochre carries numerals
-   so scores read as data, not as branding. Light theme only for now — no dark variant, so
-   nothing here should be conditioned on prefers-color-scheme. */
+/* One bright, saturated blue as the whole brand color — the accent on light sections, and the
+   same blue as the background of the dark bands (Steps, Close), rather than a separate moody
+   navy reserved just for "dark" — so the whole page reads as one premium, energetic color
+   story instead of "muted buttons on a generic dark slate." Background is true white, offset by
+   --app-backdrop/--sunken/--border reading as a step down from it. Status colors are real and
+   distinct now (green success, amber warning, red danger) instead of good/accent sharing one
+   navy — gold still carries numerals/data so scores read as data, not as a fourth status color.
+   Light theme only for now — no dark variant, so nothing here should be conditioned on
+   prefers-color-scheme. */
 :root {
   --background: #ffffff;
   --surface: #ffffff;
   --sunken: #edf1f7;
   --border: #dce3ec;
   --foreground: #101826;
-  --muted: #5b6672;
-  --accent: #1e3a8a;
-  --accent-soft: #e7ecf9;
-  --figure: #b8862e;
-  --good: #1e3a8a;
-  --warn: #9a6b12;
+  /* Every card/list's secondary line (captions, labels, table cells) reads through this one
+     token — a step darker and cooler than before so it holds its own next to the brighter
+     accent instead of washing out to flat gray. */
+  --muted: #475569;
+  --accent: #2563eb;
+  --accent-soft: #dbeafe;
+  --figure: #a16207;
+  --good: #059669;
+  --warn: #b45309;
+  --danger: #dc2626;
 
-  --deep: #1e3a8a;
-  --deep-fg: #f3f6fc;
-  --deep-muted: #a8b8de;
+  --deep: #2563eb;
+  --deep-fg: #f8fafc;
+  --deep-muted: #bfdbfe;
+
+  /* Chart marks only — kept as its own token (rather than every chart hardcoding --accent)
+     so a chart-specific tweak never has to touch the brand blue itself. Currently identical to
+     --accent; --figure (gold) is its validated categorical pair — see the dataviz skill's
+     palette validator before changing either. */
+  --chart-scored: var(--accent);
+  --chart-drafted: var(--figure);
+
+  --shadow-color: 30 41 59;
+
+  /* The signed-in app's backdrop — near-white with just enough blue in it to not read as a
+     flat gray slab, several steps lighter than --sunken (which stays reserved for hover washes
+     and skeletons, where more contrast is wanted). */
+  --app-backdrop: #f8fafc;
 }
 
 @theme inline {
@@ -36,13 +57,22 @@
   --color-figure: var(--figure);
   --color-good: var(--good);
   --color-warn: var(--warn);
+  --color-danger: var(--danger);
   --color-deep: var(--deep);
   --color-deep-fg: var(--deep-fg);
   --color-deep-muted: var(--deep-muted);
+  --color-chart-scored: var(--chart-scored);
+  --color-chart-drafted: var(--chart-drafted);
 
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Soft, tinted elevation (never a plain gray box-shadow) — one scale, reused by every
+     raised surface so "how elevated" reads consistently across the app. */
+  --shadow-sm: 0 1px 2px rgb(var(--shadow-color) / 0.05);
+  --shadow-md: 0 1px 3px rgb(var(--shadow-color) / 0.06), 0 8px 24px -12px rgb(var(--shadow-color) / 0.12);
+  --shadow-lg: 0 4px 16px -4px rgb(var(--shadow-color) / 0.1), 0 16px 40px -16px rgb(var(--shadow-color) / 0.16);
 }
 
 body {
@@ -68,4 +98,53 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Skeleton shimmer for card loading states — a moving highlight instead of a static gray
+   block, so "loading" reads as active rather than broken. Respects reduced-motion above. */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--sunken) 25%, var(--border) 50%, var(--sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* App content backdrop: near-white with a faint dot texture — quiet enough to sit behind data
+   all day. Lighter than --sunken (reserved for hover washes and skeletons) so the page reads
+   as an off-white surface, not a gray or blue slab. */
+.app-bg {
+  background-color: var(--app-backdrop);
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* A thin, quiet scrollbar for internally-scrolling regions (the sidebar nav list) — the OS
+   default (wide, gray, arrow buttons) reads as an unstyled browser chrome next to a designed
+   rail. Firefox via scrollbar-width/color, Chromium/Safari via the pseudo-elements. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 100px;
+}
+.scroll-thin::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
 }
